@@ -1,0 +1,129 @@
+;------------------------------------------------------------
+; Copyright (c) 2007-2023 RICOH COMPANY, LTD
+; All Rights Reserved
+; Printer Driver Setup Information File
+;------------------------------------------------------------
+
+[Version]
+Signature   = "$Windows NT$"
+Provider    = %Ricoh%
+ClassGUID   = {4D36E979-E325-11CE-BFC1-08002BE10318}
+Class       = Printer
+DriverVer  = 11/14/2023,4.38.0.0
+DriverIsolation = 2
+
+CatalogFile = ricu12.cat
+
+[Manufacturer]
+%Ricoh%=Ricoh,NTamd64
+
+
+;WindowsXP(amd64)
+[Ricoh.NTamd64]
+%DrvName% = PrinterModel64.dat,USBPRINT\RICOHMP_2001360F,LPTENUM\RICOHMP_2001360F,RICOHMP_2001360F
+%CoDrvName% = PrinterModel64_ver.dat,USBPRINT\RICOHPCL6DriveforUP,LPTENUM\RICOHPCL6DriveforUP,RICOHPCL6DriveforUP
+
+
+[PrinterModel64.dat]
+CopyFiles		= RPD_FILES,RPD_COMMON,RPD_COMMON_SYS32,@copcl6ud.txt
+DataSection		= RPD_DATA
+DataFile		= ricu12cd.psz
+LanguageMonitor = ricu12lm,ricu12lm.dll
+
+[PrinterModel64_ver.dat]
+CopyFiles		= RPD_FILES,RPD_COMMON,RPD_COMMON_SYS32
+DataSection		= RPD_DATA
+DataFile		= ricu12cd.psz
+LanguageMonitor = ricu12lm,ricu12lm.dll
+
+[PrinterModel64.dat.Services]
+AddService   	= ,0x2
+
+[PrinterModel64_ver.dat.Services]
+AddService   	= ,0x2
+
+[RPD_FILES]
+ricu12ui.dll,ricu12ui.dl_
+ricu12ui.irj
+ricu12ui.rdj
+ricu12ui.rcf
+ricu12ug.dll,ricu12ug.dl_
+ricu12ug.miz
+ricu12ur.dll,ricu12ur.dl_
+ricu12gr.dll,ricu12gr.dl_
+ricu12gl.dll,ricu12gl.dl_ 
+ricu12ci.dll,ricu12ci.dl_
+ricu12cd.dll,ricu12cd.dl_
+ricu12cd.psz
+ricu12cf.cfz
+ricu12cl.ini
+ricu12ch.chm
+ricu12cz.dlz
+ricu12cj.dll,ricu12cj.dl_
+ricu12ct.dll,ricu12ct.dl_
+ricu12cb.dll,ricu12cb.dl_
+ricu12tl.exe,ricu12tl.ex_ 
+ricu12tc.exe,ricu12tc.ex_
+ricu12tt.exe,ricu12tt.ex_
+ricu12tf.exe,ricu12tf.ex_
+
+
+
+[RPD_COMMON_SYS32]
+ricu12lm.dll,ricu12lm.dl_,,0x00000020
+
+[RPD_COMMON]
+ricdb64.dll,ricdb64.dl_,,0x00000020
+mfricr64.dll,mfricr64.dl_,,0x00000020
+RD01Kd64.dll,RD01Kd64.dl_,,0x00000020
+
+[RPD_DATA]
+ConfigFile		= ricu12ui.dll
+DriverFile		= ricu12gr.dll
+HelpFile		= ricu12ch.chm
+
+[DestinationDirs]
+DefaultDestDir		= 66000
+RPD_COMMON_SYS32	 	= 66002
+
+[SourceDisksNames.amd64]
+1 = %DSK%,,,
+
+[PrinterPackageInstallation.amd64]
+PackageAware			=TRUE
+
+[SourceDisksFiles.amd64]
+ricu12ui.dl_		= 1
+ricu12ui.irj		= 1
+ricu12ui.rdj		= 1
+ricu12ui.rcf		= 1
+ricu12ug.dl_		= 1
+ricu12ug.miz		= 1
+ricu12ur.dl_		= 1
+ricu12gr.dl_		= 1
+ricu12gl.dl_            = 1
+ricu12ci.dl_		= 1
+ricu12cd.dl_		= 1
+ricu12cd.psz		= 1
+ricu12cf.cfz		= 1
+ricu12cl.ini		= 1
+ricu12ch.chm		= 1
+ricu12cz.dlz		= 1
+ricu12cj.dl_		= 1
+ricu12ct.dl_		= 1
+ricu12cb.dl_		= 1
+ricu12lm.dl_		= 1
+ricdb64.dl_			= 1
+mfricr64.dl_		= 1
+RD01Kd64.dl_		= 1
+copcl6ud.txt		= 1
+ricu12tl.ex_            = 1
+ricu12tc.ex_		= 1
+ricu12tt.ex_		= 1
+ricu12tf.ex_		= 1
+
+[Strings]
+Ricoh	= "Ricoh"
+DrvName	= "PCL6 Driver for Universal Print"
+CoDrvName = "RICOH PCL6 UniversalDriver V4.38"
+DSK		= "PCL6 Printer Driver Disk1"
