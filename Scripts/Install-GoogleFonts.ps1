@@ -32,9 +32,9 @@ function Write-Log {
 # Parameters Section (Customizable)
 # ================================
 
-# Define the list of fonts to install seperated by,
-# (e.g. "notosans, opensans, firasans, merriweather")
-$fonts = {Fonts List}  
+# Define the list of fonts to install seperated by a comma ( , )
+# Example: "notosans, opensans, firasans, merriweather"
+$fonts = ${Font List}
 $tempDownloadFolder = "$env:TEMP\google_fonts"
 
 # ================================
@@ -147,5 +147,3 @@ try {
 } catch {
     Write-Log "Error installing fonts: $($_.Exception.Message)" -Level "ERROR"
 }
-
-
