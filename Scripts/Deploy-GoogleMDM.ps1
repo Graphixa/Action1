@@ -7,9 +7,6 @@
 # Requirements:
 #   - Admin rights are required.
 #   - Internet access is required to download the installers.
-#
-# Author: [Your Name]
-# Date: [Date]
 # ================================================
 
 $ProgressPreference = 'SilentlyContinue'
