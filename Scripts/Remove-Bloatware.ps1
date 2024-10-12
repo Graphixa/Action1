@@ -112,13 +112,16 @@ try {
     )
 
     foreach ($package in $appxPackages) {
-        try {
-            # Uninstall the appx package for all users
-            Write-Log "Attempting removal of: $package" -Level "INFO"
-            Get-AppxPackage -AllUsers -Name $package | Remove-AppxPackage -ErrorAction Stop
-            Write-Log "$package successfully removed." -Level "INFO"
-        } catch {
-            Write-Log "Failed to remove: ${package}: $($_.Exception.Message)" -Level "ERROR"
+        $appInstance = Get-AppxPackage -AllUsers -Name $package
+        if ($appInstance) {
+            try {
+                # Uninstall the appx package for all users
+                Write-Log "Attempting removal of: $package" -Level "INFO"
+                $appInstance | Remove-AppxPackage -ErrorAction Stop
+                Write-Log "$package successfully removed." -Level "INFO"
+            } catch {
+                Write-Log "Failed to remove: ${package}: $($_.Exception.Message)" -Level "ERROR"
+            }
         }
     }
     
