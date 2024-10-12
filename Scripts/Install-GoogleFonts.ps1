@@ -50,7 +50,17 @@ function Test-FontInstalled {
     $fontRegistryPath = "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Fonts"
     $installedFonts = Get-ItemProperty -Path $fontRegistryPath
 
-    return $installedFonts.PSObject.Properties.Name -contains $FontName
+    # Normalize the font name to lowercase for case-insensitive partial match
+    $normalizedFontName = $FontName.ToLower()
+
+    # Loop through the installed fonts and check if any contains the font name
+    foreach ($installedFont in $installedFonts.PSObject.Properties.Name) {
+        if ($installedFont.ToLower() -like "*$normalizedFontName*") {
+            return $true
+        }
+    }
+
+    return $false
 }
 
 # Function to download fonts from GitHub
@@ -77,7 +87,6 @@ function Get-Fonts {
         $fileName = [System.IO.Path]::GetFileName($link.href)
 
         # Download font file
-        Write-Log "Downloading $fileName from: $fileUrl"
         Invoke-WebRequest -Uri $fileUrl -OutFile (Join-Path -Path $outputPath -ChildPath $fileName)
     }
 
