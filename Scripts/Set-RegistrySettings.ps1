@@ -8,9 +8,6 @@
 # Requirements:
 #   - Admin rights are required.
 #   - Script must be run with administrative privileges to modify registry keys.
-#
-# Author: [Your Name]
-# Date: [Date]
 # ================================================
 
 $ProgressPreference = 'SilentlyContinue'
@@ -36,27 +33,47 @@ function Write-Log {
 # Main Script Logic
 # ================================
 
-# Add registry settings to system
+# Pre-check for Admin Rights
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Log "Script needs to be run as administrator." -Level "ERROR"
+    exit
+}
 
 try {
     Write-Log "Setting Registry Items for System" -Level "INFO"
 
     # Disable OneDrive
+    if (-not (Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive")) {
+        New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" -Force
+    }
     New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" -Name "DisableFileSyncNGSC" -Value 1 -PropertyType DWord -Force
     Write-Log "OneDrive disabled." -Level "INFO"
-    Stop-Process -Name OneDrive -Force -ErrorAction SilentlyContinue
-    Write-Log "OneDrive process stopped." -Level "INFO"
+    try {
+        Stop-Process -Name OneDrive -Force -ErrorAction SilentlyContinue
+        Write-Log "OneDrive process stopped." -Level "INFO"
+    } catch {
+        Write-Log "OneDrive process was not running or could not be stopped." -Level "WARN"
+    }
 
     # Disable Cortana
+    if (-not (Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search")) {
+        New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Force
+    }
     New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "AllowCortana" -Value 0 -PropertyType DWord -Force
     Write-Log "Cortana disabled." -Level "INFO"
 
     # Disable CoPilot
+    if (-not (Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\WindowsCopilot")) {
+        New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\WindowsCopilot" -Force
+    }
     New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\WindowsCopilot" -Name "CopilotEnabled" -Value 0 -PropertyType DWord -Force
     Write-Log "CoPilot disabled." -Level "INFO"
 
     # Disable Privacy Experience (OOBE)
-    New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OOBE" -Name "	DisablePrivacyExperience" -Value 1 -PropertyType DWord -Force
+    if (-not (Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OOBE")) {
+        New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OOBE" -Force
+    }
+    New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OOBE" -Name "DisablePrivacyExperience" -Value 1 -PropertyType DWord -Force
     Write-Log "Privacy Experience (OOBE) disabled." -Level "INFO"
 
     # Disable 'Meet Now' in Taskbar
@@ -77,69 +94,15 @@ try {
 
     # Restart Explorer to apply changes
     Write-Log "Restarting Explorer to apply changes..." -Level "INFO"
-    Stop-Process -Name explorer -Force
-    Start-Process explorer
+    try {
+        Stop-Process -Name explorer -Force
+        Start-Process explorer
+        Write-Log "Explorer restarted successfully." -Level "INFO"
+    } catch {
+        Write-Log "Failed to restart Explorer: $($_.Exception.Message)" -Level "ERROR"
+    }
 
 } catch {
     Write-Log "An error adding registry entries: $($_.Exception.Message)" -Level "ERROR"
-    return
-}
-
-# Remove bloatware from the system
-try {
-    Write-Log "Removing Pre-Installed Bloatware" -Level "INFO"
-    
-    #Removes bloatware apps for all users
-    Get-AppXPackage -AllUsers | Where-Object -Property 'Name' -In -Value @(
-    'Microsoft.Microsoft3DViewer';
-    'MicrosoftWindows.Client.WebExperience';
-    'Microsoft.BingSearch';
-    'Clipchamp.Clipchamp';
-    'Microsoft.549981C3F5F10';
-    'Microsoft.Windows.DevHome';
-    'MicrosoftCorporationII.MicrosoftFamily';
-    'Microsoft.WindowsFeedbackHub';
-    'Microsoft.GetHelp';
-    'microsoft.windowscommunicationsapps';
-    'Microsoft.WindowsMaps';
-    'Microsoft.ZuneVideo';
-    'Microsoft.BingNews';
-    'Microsoft.MicrosoftOfficeHub';
-    'Microsoft.Office.OneNote';
-    'Microsoft.OutlookForWindows';
-    'Microsoft.Paint';
-    'Microsoft.MSPaint';
-    'Microsoft.People';
-    'Microsoft.PowerAutomateDesktop';
-    'MicrosoftCorporationII.QuickAssist';
-    'Microsoft.SkypeApp';
-    'Microsoft.ScreenSketch';
-    'Microsoft.MicrosoftSolitaireCollection';
-    'Microsoft.MicrosoftStickyNotes';
-    'MSTeams';
-    'Microsoft.Getstarted';
-    'Microsoft.Windows.PeopleExperienceHost';
-    'Microsoft.XboxGameCallableUI';
-    'Microsoft.WidgetsPlatformRuntime';
-    'Microsoft.Todos';
-    'Microsoft.WindowsSoundRecorder';
-    'Microsoft.BingWeather';
-    'Microsoft.ZuneMusic';
-    'Microsoft.WindowsTerminal';
-    'Microsoft.Xbox.TCUI';
-    'Microsoft.XboxApp';
-    'Microsoft.XboxGameOverlay';
-    'Microsoft.XboxGamingOverlay';
-    'Microsoft.XboxIdentityProvider';
-    'Microsoft.XboxSpeechToTextOverlay';
-    'Microsoft.GamingApp';
-    'Microsoft.549981C3F5F10';
-    'Microsoft.MixedReality.Portal';
-    'Microsoft.Windows.Ai.Copilot.Provider';
-    'Microsoft.WindowsMeetNow';
-    ) | Remove-AppXPackage
-
-} catch {
-    Write-Log "An error occurred removing bloatware apps: $($_.Exception.Message)" -Level "ERROR"
     return
 }
