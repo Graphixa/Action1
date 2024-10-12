@@ -33,12 +33,6 @@ function Write-Log {
 # Main Script Logic
 # ================================
 
-# Pre-check for Admin Rights
-if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Log "Script needs to be run as administrator." -Level "ERROR"
-    exit
-}
-
 try {
     Write-Log "Setting Registry Items for System" -Level "INFO"
 
