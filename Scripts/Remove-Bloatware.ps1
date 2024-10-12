@@ -2,12 +2,12 @@
 # Remove Bloatware Script for Action1
 # ================================================
 # Description:
-#   - This script removes unwanted AppX packages to debloat Windows.
+#   - This script removes unwanted AppX packages and provisioned AppX packages to debloat Windows.
 #   - The AppX packages include pre-installed applications and store apps that are not necessary.
 #
 # Requirements:
 #   - Admin rights are required.
-#   - Script must be run with administrative privileges to remove AppX packages.
+#   - Script must be run with administrative privileges to remove AppX and provisioned packages.
 # ================================================
 
 $ProgressPreference = 'SilentlyContinue'
@@ -30,7 +30,7 @@ function Write-Log {
 }
 
 # ================================
-# Main Script Logic - AppX Package Uninstall
+# Main Script Logic - AppX Package and Provisioned Package Uninstall
 # ================================
 try {
     Write-Log "Removing pre-installed bloatware..." -Level "INFO"
@@ -39,6 +39,7 @@ try {
         # Microsoft apps
         "Microsoft.3DBuilder",
         "Microsoft.549981C3F5F10",  # Cortana app
+        "Microsoft.Copilot",
         "Microsoft.Messaging",
         "Microsoft.BingFinance",
         "Microsoft.BingFoodAndDrink",
@@ -51,14 +52,26 @@ try {
         "Microsoft.News",
         "Microsoft.MixedReality.Portal",
         "Microsoft.Office.OneNote",
+        "Microsoft.OutlookForWindows",
         "Microsoft.Office.Sway",
         "Microsoft.OneConnect",
+        "Microsoft.People",
         "Microsoft.SkypeApp",
         "Microsoft.Todos",
         "Microsoft.WindowsMaps",
         "Microsoft.ZuneVideo",
+        "Microsoft.ZuneMusic",
         "MicrosoftCorporationII.MicrosoftFamily",  # Family Safety App
         "MSTeams",
+        "Outlook",  # New Outlook app
+        "LinkedInforWindows",  # LinkedIn app
+        "Microsoft.XboxApp",
+        "Microsoft.XboxGamingOverlay",
+        "Microsoft.Xbox.TCUI",
+        "Microsoft.XboxGameOverlay",
+        "Microsoft.WindowsCommunicationsApps",  # Mail app
+        "Microsoft.YourPhone",  # Phone Link (Your Phone)
+        "MicrosoftCorporationII.QuickAssist",  # Quick Assist
 
         # Third-party apps
         "ACGMediaPlayer",
@@ -87,7 +100,6 @@ try {
         "king.com.BubbleWitch3Saga",
         "king.com.CandyCrushSaga",
         "king.com.CandyCrushSodaSaga",
-        "LinkedInforWindows",
         "MarchofEmpires",
         "Netflix",
         "NYTCrossword",
@@ -112,15 +124,26 @@ try {
     )
 
     foreach ($package in $appxPackages) {
+        # First remove for all users
         $appInstance = Get-AppxPackage -AllUsers -Name $package
         if ($appInstance) {
             try {
                 # Uninstall the appx package for all users
-                Write-Log "Attempting removal of: $package" -Level "INFO"
-                $appInstance | Remove-AppxPackage -ErrorAction Stop
+                Get-AppxPackage -AllUsers -Name $package | Remove-AppxPackage -AllUsers -ErrorAction Continue
                 Write-Log "$package successfully removed." -Level "INFO"
             } catch {
                 Write-Log "Failed to remove: ${package}: $($_.Exception.Message)" -Level "ERROR"
+            }
+        }
+
+        # Then remove provisioned package to prevent reinstallation
+        $provPackage = Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq $package }
+        if ($provPackage) {
+            try {
+                Remove-AppxProvisionedPackage -Online -PackageName $provPackage.PackageName -ErrorAction Stop
+                Write-Log "Provisioned package $package removed successfully." -Level "INFO"
+            } catch {
+                Write-Log "Failed to remove provisioned package ${package}: $($_.Exception.Message)" -Level "ERROR"
             }
         }
     }
