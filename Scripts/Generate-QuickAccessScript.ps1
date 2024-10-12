@@ -18,18 +18,16 @@ function Write-Log {
 # Define the startup folder path
 $scriptGenerateLocation = "$env:ALLUSERSPROFILE\Microsoft\Windows\Start Menu\Programs\StartUp\"
 
-
 # Generated Script Content (the script that will be created)
 $scriptContent = @"
-\$ProgressPreference = 'SilentlyContinue'
+`$ProgressPreference = 'SilentlyContinue'
 
-
-\$qa = New-Object -ComObject shell.application
-\$quickAccessFolder = \$qa.Namespace('shell:::{679f85cb-0220-4080-b29b-5540cc05aab6}')
-\$items = \$quickAccessFolder.Items()
+`$qa = New-Object -ComObject shell.application
+`$quickAccessFolder = `$qa.Namespace('shell:::{679f85cb-0220-4080-b29b-5540cc05aab6}')
+`$items = `$quickAccessFolder.Items()
 
 # Array of folders to pin
-\$foldersToPin = @(
+`$foldersToPin = @(
     "G:\My Drive",
     "G:\Shared drives\Management",
     "G:\Shared drives\Admin",
@@ -40,21 +38,17 @@ $scriptContent = @"
     "G:\Shared drives\IT"
 )
 
-
 # Unpin all existing folders
-foreach (\$item in \$items) {
-    \$item.InvokeVerb('unpinfromhome')
+foreach (`$item in `$items) {
+    `$item.InvokeVerb('unpinfromhome')
 }
 
 # Pin new folders to Quick Access
-foreach (\$folder in \$foldersToPin) {
-    \$QuickAccess = New-Object -ComObject shell.application
-    \$QuickAccess.Namespace(\$folder).Self.InvokeVerb("pintohome")
+foreach (`$folder in `$foldersToPin) {
+    `$QuickAccess = New-Object -ComObject shell.application
+    `$QuickAccess.Namespace(`$folder).Self.InvokeVerb("pintohome")
 }
 
-# ================================
-# End of Script
-# ================================
 "@
 
 # Define the path of the new script in the startup folder
