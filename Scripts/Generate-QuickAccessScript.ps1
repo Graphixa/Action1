@@ -19,6 +19,7 @@ function Write-Log {
 $scriptGenerateLocation = "$env:ALLUSERSPROFILE\Microsoft\Windows\Start Menu\Programs\StartUp\"
 
 # Generated Script Content (the script that will be created)
+# Make sure to escape all variables with (`) - EXAMPLE: `$ProgressPreference = 'SilentlyContinue'
 $scriptContent = @"
 `$ProgressPreference = 'SilentlyContinue'
 
