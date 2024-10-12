@@ -1,7 +1,7 @@
 # Action 1 - Scripts to Add
-[] Install GCPW
-[] Install Chrome Enterprise
-[] Install Google Drive File Stream
+[x] Install GCPW
+[x] Install Chrome Enterprise
+[x] Install Google Drive File Stream
 [x] Quick Access Loader - Create on System and Run on Startup /All Users (Windows 11 compatible)
 [] Deploy file defaults script 
 [] Remove taskbar news script

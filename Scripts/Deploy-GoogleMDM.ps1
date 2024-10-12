@@ -1,5 +1,5 @@
 # ================================================
-# PowerShell Script Template for Action1
+# Deploy Google Workspace MDM for Action1
 # ================================================
 # Description:
 #   - This script deploys Google Chrome Enterprise, GCPW (Google Credential Provider for Windows), and Google Drive File Stream, with required configurations.
