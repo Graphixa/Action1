@@ -3,8 +3,8 @@
 # ================================================
 # Description:
 #   - This script imports specified task files (XML) into Windows Task Scheduler.
-#   - The task files can be sourced from a local share, GitHub repository, or Google Drive.
-#   - Tasks are imported directly into Task Scheduler (no subfolder).
+#   - The task files can be sourced from a local share, GitHub repository, or other services with direct download links.
+#   - Tasks are imported directly into Task Scheduler.
 #   - Temporary XML files are cleaned up after import.
 #
 # Requirements:
@@ -15,6 +15,7 @@
 $ProgressPreference = 'SilentlyContinue'
 
 $taskFiles = @("${Import Task Path}") # Can be URL, Local Path, or //Network_Share. Separate multiple task file paths by commas (,)
+$tempTaskFolder = "$env:TEMP\Action1Tasks" # Declare temp folder globally
 
 # ================================
 # Logging Function: Write-Log
@@ -34,53 +35,23 @@ function Write-Log {
 }
 
 # ================================
-# Function: Convert Google Drive URL to Direct Download Link
-# ================================
-function Convert-GoogleDriveLink {
-    param (
-        [string]$driveLink
-    )
-
-    try {
-        # Extract the File ID from the Google Drive share link
-        if ($driveLink -match "drive.google.com\/file\/d\/([^\/]+)") {
-            $fileId = $matches[1]
-            # Add the confirm=t parameter to bypass the virus scan warning page
-            $directDownloadLink = "https://drive.google.com/uc?export=download&id=$fileId&confirm=t"
-            return $directDownloadLink
-        } else {
-            Write-Log "Invalid Google Drive link format: $driveLink" -Level "ERROR"
-        }
-    } catch {
-        Write-Log "Error converting Google Drive link: $($_.Exception.Message)" -Level "ERROR"
-    }
-}
-
-
-# ================================
 # Function: Import Task File
 # ================================
 function Import-Task {
     param (
-        [string]$taskFile,    # Path or URL to the task file (XML)
-        [int]$taskCounter    # Counter to ensure unique task names
+        [string]$taskFile    # Path or URL to the task file (XML)
     )
 
-    # Define temp folder for task files
-    $tempTaskFolder = "$env:TEMP\Action1Tasks"
+    # Ensure temp folder for task files exists
     if (-not (Test-Path $tempTaskFolder)) {
         New-Item -Path $tempTaskFolder -ItemType Directory -Force | Out-Null
     }
 
-    # Ensure each task has a unique temp file name
-    $tempTaskFile = Join-Path $tempTaskFolder "Task_$taskCounter.xml"
+    # Extract file name and remove the .xml extension
+    $fileName = [System.IO.Path]::GetFileNameWithoutExtension($taskFile)
+    $tempTaskFile = Join-Path $tempTaskFolder "$fileName.xml"
 
     try {
-        # Check if it's a Google Drive link
-        if ($taskFile -match "^https:\/\/drive\.google\.com\/file\/d\/") {
-            $taskFile = Convert-GoogleDriveLink -driveLink $taskFile
-        }
-
         # Check if it's a remote URL or a local/network path
         if ($taskFile -match "^https?://") {
             Write-Log "Downloading task file from remote URL: $taskFile" -Level "INFO"
@@ -94,11 +65,10 @@ function Import-Task {
         }
 
         # Import the task into Task Scheduler
-        $taskName = "Task_$taskCounter"
-        Write-Log "Importing task into Task Scheduler with name: $taskName" -Level "INFO"
-        Register-ScheduledTask -TaskName $taskName -Xml (Get-Content $tempTaskFile | Out-String) -Force | Out-Null
+        Write-Log "Importing task into Task Scheduler with name: $fileName" -Level "INFO"
+        Register-ScheduledTask -TaskName "Action1-$fileName" -Xml (Get-Content $tempTaskFile | Out-String) -Force | Out-Null
 
-        Write-Log "Successfully imported task: $taskName" -Level "INFO"
+        Write-Log "Successfully imported task: $fileName" -Level "INFO"
     } catch {
         Write-Log "Failed to import task: $($_.Exception.Message)" -Level "ERROR"
     }
@@ -109,11 +79,8 @@ function Import-Task {
 # ================================
 
 try {
-    $taskCounter = 1
-
     foreach ($taskFile in $taskFiles) {
-        Import-Task -taskFile $taskFile -taskCounter $taskCounter
-        $taskCounter++
+        Import-Task -taskFile $taskFile
     }
 
     Write-Log "Scheduled task(s) import complete." -Level "INFO"
