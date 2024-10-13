@@ -1,16 +1,21 @@
 # ================================================
-# Set Registry Settings Script for Action1
+# Set Wallpaper and Lock Screen Script for Action1
 # ================================================
 # Description:
-#   - This script disables OneDrive, CoPilot, 'Meet Now', Taskbar Widgets, News and Interests, Personalized Advertising, Start Menu Tracking, and Start Menu Suggestions.
-#   - The script will also restart Explorer to apply the changes.
+#   - This script downloads and sets the wallpaper and lock screen image on Windows.
+#   - The image files can be sourced from a local path, network share, or URL.
+#   - Images are downloaded and kept in a folder on $env:SystemDrive\Action1 when necessary.
 #
 # Requirements:
 #   - Admin rights are required.
-#   - Script must be run with administrative privileges to modify registry keys.
+#   - Supported image formats: .jpg, .png.
 # ================================================
 
 $ProgressPreference = 'SilentlyContinue'
+
+$wallpaperUrlOrPath = "${Wallpaper Path}"  # Provide URL or path for the wallpaper image
+$lockScreenUrlOrPath = "${LockScreen Path}"  # Provide URL or path for the lock screen image
+$downloadLocation = "$env:SystemDrive\Action1" # Path to download and keep wallpaper/lockscreen files *if required*
 
 # ================================
 # Logging Function: Write-Log
@@ -147,58 +152,85 @@ function RegistryTouch {
 }
 
 # ================================
+# Download Image Function
+# ================================
+function Get-Image {
+    param (
+        [string]$imagePath,   # URL or path to the image file
+        [string]$fileName     # File name for saving the image locally
+    )
+
+    $localImagePath = if ($imagePath -match "^https?://") { # Only create download location for URLs
+        if (-not (Test-Path $downloadLocation)) {
+            New-Item -Path $downloadLocation -ItemType Directory -Force | Out-Null
+        }
+        Join-Path $downloadLocation $fileName
+    } else {
+        $imagePath
+    }
+
+    try {
+        if ($imagePath -match "^https?://") {
+            Write-Log "Downloading image from URL: $imagePath" -Level "INFO"
+            Invoke-WebRequest -Uri $imagePath -OutFile $localImagePath -ErrorAction Stop
+        } elseif (-not (Test-Path $imagePath)) {
+            throw "The image file does not exist or is inaccessible: $imagePath"
+        }
+
+        return $localImagePath
+    } catch {
+        Write-Log "Failed to download or copy image: $($_.Exception.Message)" -Level "ERROR"
+        throw
+    }
+}
+
+# ================================
 # Main Script Logic
 # ================================
-
 try {
-    Write-Log "Setting Registry Items for System" -Level "INFO"
+    Write-Log "Starting Wallpaper and Lock Screen configuration." -Level "INFO"
 
-    # Disable OneDrive
-    RegistryTouch -action add -path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" -name "DisableFileSyncNGSC" -value 1 -type "DWord"
-    Write-Log "OneDrive disabled." -Level "INFO"
-    try {
-        Stop-Process -Name OneDrive -Force -ErrorAction SilentlyContinue
-        Write-Log "OneDrive process stopped." -Level "INFO"
-    } catch {
-        Write-Log "OneDrive process was not running or could not be stopped." -Level "WARN"
+    # Set Wallpaper
+    if ($wallpaperUrlOrPath) {
+        try {
+            $localWallpaperPath = Get-Image -imagePath $wallpaperUrlOrPath -fileName "wallpaper.jpg"
+            Write-Log "Setting wallpaper to: $localWallpaperPath"
+
+            $registryPath = "HKLM:\Software\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
+            RegistryTouch -action add -path $registryPath -name "DesktopImagePath" -type "String" -value $localWallpaperPath
+            RegistryTouch -action add -path $registryPath -name "DesktopImageUrl" -type "String" -value $localWallpaperPath
+            RegistryTouch -action add -path $registryPath -name "DesktopImageStatus" -type "DWord" -value 1
+            Write-Log "Wallpaper set successfully." -Level "INFO"
+        } catch {
+            Write-Log "Error setting wallpaper: $($_.Exception.Message)" -Level "ERROR"
+        }
+    } else {
+        Write-Log "Wallpaper not set. No image path provided." -Level "WARN"
     }
 
-    # Disable Cortana
-    RegistryTouch -action add -path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -name "AllowCortana" -value 0 -type "DWord"
+    # Set Lock Screen
+    if ($lockScreenUrlOrPath) {
+        try {
+            $localLockScreenPath = Get-Image -imagePath $lockScreenUrlOrPath -fileName "lockscreen.jpg"
+            Write-Log "Setting lock screen image to: $localLockScreenPath"
 
-    # Disable CoPilot
-    RegistryTouch -action add -path "HKLM:\SOFTWARE\Policies\Microsoft\WindowsCopilot" -name "CopilotEnabled" -value 0 -type "DWord"
-
-    # Disable Privacy Experience (OOBE)
-    RegistryTouch -action add -path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OOBE" -name "DisablePrivacyExperience" -value 1 -type "DWord"
-
-    # Disable 'Meet Now' in Taskbar
-    RegistryTouch -action add -path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -name "HideSCAMeetNow" -value 1 -type "DWord"
-
-    # Disable News and Interests
-    RegistryTouch -action add -path "HKLM:\SOFTWARE\Policies\Microsoft\Dsh" -name "AllowNewsAndInterests" -value 0 -type "DWord"
-
-    # Disable Personalized Advertising
-    RegistryTouch -action add -path "HKLM:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo" -name "Enabled" -value 0 -type "DWord"
-
-    # Disable Start Menu Suggestions and Windows Advertising
-    RegistryTouch -action add -path "HKLM:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -name "SubscribedContent-338389Enabled" -value 0 -type "DWord"
-
-    # Disable First Logon Animation
-    RegistryTouch -action add -path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -name "EnableFirstLogonAnimation" -value 0 -type "DWord"
-
-    # Disable Lock Screen App Notifications
-    RegistryTouch -action add -path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -name "DisableLockScreenAppNotifications" -value 1 -type "DWord"
-
-    # Restart Explorer to apply changes
-    try {
-        Stop-Process -Name explorer -Force
-        Start-Process explorer
-        Write-Log "Explorer restarted successfully." -Level "INFO"
-    } catch {
-        Write-Log "Failed to restart Explorer: $($_.Exception.Message)" -Level "ERROR"
+            $registryPath = "HKLM:\Software\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
+            RegistryTouch -action add -path $registryPath -name "LockScreenImagePath" -type "String" -value $localLockScreenPath
+            RegistryTouch -action add -path $registryPath -name "LockScreenImageUrl" -type "String" -value $localLockScreenPath
+            RegistryTouch -action add -path $registryPath -name "LockScreenImageStatus" -type "DWord" -value 1
+            Write-Log "Lock screen image set successfully." -Level "INFO"
+        } catch {
+            Write-Log "Error setting lock screen image: $($_.Exception.Message)" -Level "ERROR"
+        }
+    } else {
+        Write-Log "Lock screen image not set. No image path provided." -Level "WARN"
     }
+
+    # Restart Explorer for settings to take effect
+    Stop-Process -Name explorer -Force
+    Start-Process explorer
+    Write-Log "Explorer restarted successfully." -Level "INFO"
 
 } catch {
-    Write-Log "An error occurred while setting registry entries: $($_.Exception.Message)" -Level "ERROR"
+    Write-Log "An error occurred during the setup: $($_.Exception.Message)" -Level "ERROR"
 }
