@@ -13,7 +13,7 @@
 $ProgressPreference = 'SilentlyContinue'
 
 # Define the URL or local path for the default app associations XML file
-$defaultAppAssocURL = "${XML File URL}" # Replace this with your XML file's direct link.
+$defaultAppAssocPath = "${XML File Path}" # Replace this with your XML file's direct link.
 
 # ================================
 # Logging Function: Write-Log
@@ -71,7 +71,7 @@ function Set-DefaultAppAssociations {
         $xmlFilePath = Join-Path $tempFolder "DefaultAppAssoc.xml"
     
         # Download the default app associations XML file
-        Download-File -fileURL $defaultAppAssocURL -destinationPath $xmlFilePath
+        Download-File -fileURL $defaultAppAssocPath -destinationPath $xmlFilePath
     
         # Apply the default app associations using DISM
         Write-Log "Applying default app associations using DISM." -Level "INFO"
