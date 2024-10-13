@@ -60,36 +60,41 @@ function Download-File {
 # ================================
 # Main Script Logic
 # ================================
-try {
-    # Define the temp folder for the downloaded XML file
-    $tempFolder = "$env:TEMP\Action1Files"
-    if (-not (Test-Path $tempFolder)) {
-        New-Item -Path $tempFolder -ItemType Directory -Force | Out-Null
-    }
-    $xmlFilePath = Join-Path $tempFolder "DefaultAppAssoc.xml"
 
-    # Download the default app associations XML file
-    Download-File -fileURL $defaultAppAssocURL -destinationPath $xmlFilePath
-
-    # Apply the default app associations using DISM
-    Write-Log "Applying default app associations using DISM." -Level "INFO"
+function Set-DefaultAppAssociations {
     try {
-        Start-Process dism.exe -ArgumentList "/Online /Import-DefaultAppAssociations:$xmlFilePath" -Wait -NoNewWindow
-        Write-Log "Default app associations applied successfully." -Level "INFO"
-    } catch {
-        Write-Log "Failed to apply default app associations: $($_.Exception.Message)" -Level "ERROR"
-    }
-
-} catch {
-    Write-Log "An error occurred during script execution: $($_.Exception.Message)" -Level "ERROR"
-} finally {
-    # Clean up the temp folder
-    try {
-        if (Test-Path $tempFolder) {
-            Remove-Item -Path $tempFolder -Recurse -Force
-            Write-Log "Temporary files cleaned up." -Level "INFO"
+        # Define the temp folder for the downloaded XML file
+        $tempFolder = "$env:TEMP\Action1Files"
+        if (-not (Test-Path $tempFolder)) {
+            New-Item -Path $tempFolder -ItemType Directory -Force | Out-Null
         }
+        $xmlFilePath = Join-Path $tempFolder "DefaultAppAssoc.xml"
+    
+        # Download the default app associations XML file
+        Download-File -fileURL $defaultAppAssocURL -destinationPath $xmlFilePath
+    
+        # Apply the default app associations using DISM
+        Write-Log "Applying default app associations using DISM." -Level "INFO"
+        try {
+            Start-Process dism.exe -ArgumentList "/Online /Import-DefaultAppAssociations:$xmlFilePath" -Wait -NoNewWindow
+            Write-Log "Default app associations applied successfully." -Level "INFO"
+        } catch {
+            Write-Log "Failed to apply default app associations: $($_.Exception.Message)" -Level "ERROR"
+        }
+    
     } catch {
-        Write-Log "Failed to clean up temp folder: $($_.Exception.Message)" -Level "ERROR"
-    }
+        Write-Log "An error occurred during script execution: $($_.Exception.Message)" -Level "ERROR"
+    } finally {
+        # Clean up the temp folder
+        try {
+            if (Test-Path $tempFolder) {
+                Remove-Item -Path $tempFolder -Recurse -Force
+                Write-Log "Temporary files cleaned up." -Level "INFO"
+            }
+        } catch {
+            Write-Log "Failed to clean up temp folder: $($_.Exception.Message)" -Level "ERROR"
+        }
+    }    
 }
+
+Set-DefaultAppAssociations
