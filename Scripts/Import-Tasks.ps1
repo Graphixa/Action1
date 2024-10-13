@@ -14,8 +14,11 @@
 
 $ProgressPreference = 'SilentlyContinue'
 
-$taskFiles = @("${Import Task Path}") # Can be URL, Local Path, or //Network_Share. Separate multiple task file paths by commas (,)
-$tempTaskFolder = "$env:TEMP\Action1Tasks" # Declare temp folder globally
+# Split the provided paths/URLs into an array (assumes comma-separated URLs)
+$taskFiles = $("${Import Task Path}" -split ',').Trim() # Ensure trimming to remove any surrounding spaces
+
+# Define temp folder globally
+$tempTaskFolder = "$env:TEMP\Action1Tasks"
 
 # ================================
 # Logging Function: Write-Log
@@ -66,7 +69,7 @@ function Import-Task {
 
         # Import the task into Task Scheduler
         Write-Log "Importing task into Task Scheduler with name: $fileName" -Level "INFO"
-        Register-ScheduledTask -TaskName "Action1-$fileName" -Xml (Get-Content $tempTaskFile | Out-String) -Force | Out-Null
+        Register-ScheduledTask -TaskName $fileName -Xml (Get-Content $tempTaskFile | Out-String) -Force | Out-Null
 
         Write-Log "Successfully imported task: $fileName" -Level "INFO"
     } catch {
@@ -77,7 +80,6 @@ function Import-Task {
 # ================================
 # Main Script Logic
 # ================================
-
 try {
     foreach ($taskFile in $taskFiles) {
         Import-Task -taskFile $taskFile
