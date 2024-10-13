@@ -10,7 +10,7 @@
 [x] Disable Copilot
 [] Set Taskbar For Users from configuration from remote share (google drive)
 [] Deploy start menu start2.bin file from remote share
-[] Set theme REGISTRY entries
+[x] Set theme REGISTRY entries
 [] Download and install Tasks
 [] Deploy Office using ODT - Configuration in Action1 - https://www.action1.com/documentation/deploying-office-365-package/?_gl=1*smerzp*_up*MQ..*_ga*MTI3NjkxNDI2NC4xNzI4NzEyMDU4*_ga_E0NQ6S2RHD*MTcyODcxMjA1Ny4xLjEuMTcyODcxMjI3Mi4wLjAuMTIzMDY0MzYyMA
 
