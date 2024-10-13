@@ -6,7 +6,7 @@
 [x] Quick Access Loader - Create on System and Run on Startup /All Users (Windows 11 compatible)
 [x] Deploy file defaults script 
 [x] Remove taskbar news script
-[] Set branding Lockscreen + wallpaper from URL / Network Share
+[x] Set branding Lockscreen + wallpaper from URL / Network Share
 [x] Remove OneDrive
 [x] Disable Copilot
 [] Set Taskbar For Users from configuration from remote share (google drive)
