@@ -5,24 +5,88 @@
         {
             "Packages": [
                 {
-                    "Id": "Microsoft.Teams",
-                    "Version": "24180.205.2980.1757"
+                    "Id": "Git.Git",
+                    "Version": "2.47.0"
                 },
                 {
-                    "Id": "Valve.Steam",
-                    "Version": "2.10.91.91"
+                    "Id": "geeksoftwareGmbH.PDF24Creator",
+                    "Version": "11.20.1"
                 },
                 {
-                    "Id": "EpicGames.EpicGamesLauncher",
-                    "Version": "1.3.93.0"
+                    "Id": "Bitwarden.Bitwarden",
+                    "Version": "2024.9.0"
                 },
                 {
-                    "Id": "Microsoft.VisualStudioCode",
-                    "Version": "1.92.0"
+                    "Id": "Beeftext.Beeftext",
+                    "Version": "16.0"
                 },
                 {
-                    "Id": "Microsoft.WindowsTerminal",
-                    "Version": "1.20.11781.0"
+                    "Id": "Audacity.Audacity",
+                    "Version": "3.6.4"
+                },
+                {
+                    "Id": "Apple.iTunes",
+                    "Version": "12.13.2.3"
+                },
+                {
+                    "Id": "Asana.Asana",
+                    "Version": "2.2.3"
+                },
+                {
+                    "Id": "Adobe.Acrobat.Reader.64-bit",
+                    "Version": "24.003.20180"
+                },
+                {
+                    "Id": "7zip.7zip",
+                    "Version": "24.08"
+                },
+                {
+                    "Id": "Google.ChromeRemoteDesktopHost",
+                    "Version": "130.0.6723.14"
+                },
+                {
+                    "Id": "Grammarly.Grammarly",
+                    "Version": "1.2.104.1487"
+                },
+                {
+                    "Id": "Grammarly.Grammarly.Office",
+                    "Version": "6.8.263"
+                },
+                {
+                    "Id": "Google.GoogleDrive",
+                    "Version": "98.0.0.0"
+                },
+                {
+                    "Id": "IObit.DriverBooster",
+                    "Version": "12.0.0.356"
+                },
+                {
+                    "Id": "Levitsky.FontBase",
+                    "Version": "2.20.7"
+                },
+                {
+                    "Id": "LocalSend.LocalSend",
+                    "Version": "1.15.4"
+                },
+                {
+                    "Id": "MonkiLabs.Notejoy",
+                    "Version": "2.0.0"
+                },
+                {
+                    "Id": "NickeManarin.ScreenToGif",
+                    "Version": "2.41.0"
+                },
+                {
+                    "Id": "OliverSchwendener.ueli",
+                    "Version": "8.29.0"
+                },
+                {
+                    "Id": "Spotify.Spotify",
+                    "Version": "1.2.48.405.gf2c48e6f"
+                },
+                {
+                    "Id": "VideoLAN.VLC",
+                    "Version": "3.0.21"
                 }
             ],
             "SourceDetails": {
