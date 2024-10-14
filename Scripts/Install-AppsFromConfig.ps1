@@ -37,6 +37,22 @@ function Write-Log {
 }
 
 # ================================
+# Function: Get-WinGetExecutable
+# ================================
+function Get-WinGetExecutable {
+    $winget = Get-AppxPackage -AllUsers -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq 'Microsoft.DesktopAppInstaller' }
+
+    if ($null -ne $winget) {
+        $wingetFilePath = Join-Path -Path $($winget.InstallLocation) -ChildPath 'winget.exe'
+        $wingetFile = Get-Item -Path $wingetFilePath
+        return $wingetFile
+    } else {
+        Write-Log 'The WinGet executable is not detected, please proceed to Microsoft Store to update the Microsoft.DesktopAppInstaller application.' -Level "WARN"
+        return $false
+    }
+}
+
+# ================================
 # Function: Download or Access Winget Configuration File
 # ================================
 function Get-WingetConfigFile {
@@ -102,17 +118,23 @@ function Validate-WingetConfig {
 try {
     Write-Log "Starting Winget application installation process." -Level "INFO"
 
-    # Step 1: Download or access the configuration file
+    # Step 1: Check for WinGet executable
+    $wingetExe = Get-WinGetExecutable
+    if (-not $wingetExe) {
+        throw "Winget executable not found. Exiting script."
+    }
+
+    # Step 2: Download or access the configuration file
     $wingetConfigFile = Get-WingetConfigFile -configPath $wingetConfigPath -fileName "winget-config.json"
 
-    # Step 2: Validate the Winget configuration file
+    # Step 3: Validate the Winget configuration file
     if (-not (Validate-WingetConfig -configFile $wingetConfigFile)) {
         throw "The configuration file is invalid. Exiting script."
     }
 
-    # Step 3: Reset Winget sources and accept agreements
+    # Step 4: Install applications via Winget
     try {
-        Write-Log "Resetting Winget sources and accepting agreements." -Level "INFO"
+        Write-Log "Installing applications via Winget using the config file." -Level "INFO"
         
         # Set flag for ignoring versions in config file
         $ignoreVersions = ""
@@ -120,8 +142,8 @@ try {
             $ignoreVersions = "--ignore-versions"
         }
 
-        winget source reset --force
-        winget import -i $wingetConfigFile --accept-package-agreements --accept-source-agreements $ignoreVersions
+        # Install applications
+        & $wingetExe.FullName import -i $wingetConfigFile --accept-package-agreements --accept-source-agreements $ignoreVersions --ignore-unavailable 
 
         Write-Log "Applications installed successfully via Winget." -Level "INFO"
     } catch {

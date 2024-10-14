@@ -22,18 +22,28 @@ App Info: https://www.manageengine.com/products/desktop-central/software-install
 
 Winget App Info: https://github.com/microsoft/winget-pkgs/tree/master/manifests
 
-[] 7zip
-[] Adobe reader
-[] Asana
-[] Audacity
-[] Beeftext
-[] Bitwarden
-[] Chrome-remote-desktop-host
-[] Driver Booster
-[] Fontbase
-[] Git
+
+APPS INCLUDED IN ACTION1
+[x] 7zip
+[x] Adobe reader
+[x] PDFCreator Free
+[x] Audacity
+[x] Bitwarden
+[x] Google Drive
+[x] Git
+[x] VLC
+
+TO ADD TO CUSTOM REPOSITORY
 [] Grammarly for Windows
+[] Grammarly for MS Office
 [] itunes
 [] Spotify
 [] ueli
-[] VLC
+[] Driver Booster
+[] Fontbase
+[] LocalSend
+[] Notejoy
+[] Screen2Gif
+[] Beeftext
+[] Asana
+[] Chrome-remote-desktop-host
