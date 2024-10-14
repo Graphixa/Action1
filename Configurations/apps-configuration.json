@@ -1,0 +1,36 @@
+{
+    "$schema": "https://aka.ms/winget-packages.schema.1.0.json",
+    "WinGetVersion": "0.3.11201",
+    "Sources": [
+        {
+            "Packages": [
+                {
+                    "Id": "Microsoft.Teams",
+                    "Version": "24180.205.2980.1757"
+                },
+                {
+                    "Id": "Valve.Steam",
+                    "Version": "2.10.91.91"
+                },
+                {
+                    "Id": "EpicGames.EpicGamesLauncher",
+                    "Version": "1.3.93.0"
+                },
+                {
+                    "Id": "Microsoft.VisualStudioCode",
+                    "Version": "1.92.0"
+                },
+                {
+                    "Id": "Microsoft.WindowsTerminal",
+                    "Version": "1.20.11781.0"
+                }
+            ],
+            "SourceDetails": {
+                "Argument": "https://winget.azureedge.net/cache",
+                "Identifier": "Microsoft.Winget.Source_8wekyb3d8bbwe",
+                "Name": "winget",
+                "Type": "Microsoft.PreIndexed.Package"
+            }
+        }
+    ]
+}
