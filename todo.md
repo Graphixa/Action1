@@ -34,7 +34,7 @@ APPS INCLUDED IN ACTION1
 [x] VLC
 
 TO ADD TO CUSTOM REPOSITORY
-[] Grammarly for Windows
+[x] Grammarly for Windows
 [] Grammarly for MS Office
 [] itunes
 [] Spotify
@@ -44,6 +44,6 @@ TO ADD TO CUSTOM REPOSITORY
 [] LocalSend
 [] Notejoy
 [] Screen2Gif
-[] Beeftext
+[x] Beeftext
 [] Asana
 [] Chrome-remote-desktop-host

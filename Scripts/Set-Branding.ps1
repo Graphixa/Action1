@@ -4,7 +4,7 @@
 # Description:
 #   - This script downloads and sets the wallpaper and lock screen image on Windows.
 #   - The image files can be sourced from a local path, network share, or URL.
-#   - Images are downloaded and kept in a folder on $env:SystemDrive\Action1 when necessary.
+#   - Images are downloaded and stored in $env:SystemDrive\Action1 when necessary.
 #
 # Requirements:
 #   - Admin rights are required.
@@ -13,8 +13,8 @@
 
 $ProgressPreference = 'SilentlyContinue'
 
-$wallpaperUrlOrPath = "${Wallpaper Path}"  # Provide URL or path for the wallpaper image
-$lockScreenUrlOrPath = "${LockScreen Path}"  # Provide URL or path for the lock screen image
+$wallpaperUrlOrPath = ${Wallpaper Path}
+$lockScreenUrlOrPath = ${LockScreenPath}  
 $downloadLocation = "$env:SystemDrive\Action1" # Path to download and keep wallpaper/lockscreen files *if required*
 
 # ================================

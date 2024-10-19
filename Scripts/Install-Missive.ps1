@@ -1,3 +1,15 @@
+# ================================================
+# Missive Installation Script for Action1
+# ================================================
+# Description:
+#   - This script checks if Missive is installed. If not, it downloads the latest version and installs it.
+#   - It also creates shortcuts for all users and cleans up temporary files afterward.
+#
+# Requirements:
+#   - Admin rights are required.
+#   - Internet access is required to download the installer.
+# ================================================
+
 $ProgressPreference = 'SilentlyContinue'
 
 # Logging Function

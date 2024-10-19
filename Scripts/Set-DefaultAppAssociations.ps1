@@ -13,7 +13,7 @@
 $ProgressPreference = 'SilentlyContinue'
 
 # Define the URL or local path for the default app associations XML file
-$defaultAppAssocPath = "${XML File Path}" # Replace this with your XML file's direct link.
+$defaultAppAssocPath = ${XML File Path} # Replace this with your XML file's direct link.
 
 # ================================
 # Logging Function: Write-Log

@@ -9,8 +9,12 @@
 #   - Internet access is required to download the installers.
 # ================================================
 
+
 $ProgressPreference = 'SilentlyContinue'
 Set-StrictMode -Version Latest
+
+$googleEnrollmentToken = ${Enrollment Token}
+$domainsAllowedToLogin = ${Domains Allowed To Login}
 
 # ================================
 # Logging Function: Write-Log
@@ -18,7 +22,7 @@ Set-StrictMode -Version Latest
 function Write-Log {
     param (
         [string]$Message,
-        [string]$LogFilePath = "$env:SystemDrive\LST-Action1.log", # Default log file path
+        [string]$LogFilePath = "$env:SystemDrive\LST-Action1.log",
         [string]$Level = "INFO"  # Log level: INFO, WARN, ERROR
     )
     
@@ -30,16 +34,9 @@ function Write-Log {
 }
 
 # ================================
-# Parameters Section (Customizable)
-# ================================
-$domainsAllowedToLogin = ${Domain}
-$googleEnrollmentToken = ${Enrollment Token}
-
-# ================================
 # Main Script Logic
 # ================================
 
-# Function to check if a program is installed
 function Test-ProgramInstalled {
     param(
         [string]$ProgramName
@@ -54,7 +51,6 @@ function Test-ProgramInstalled {
     return $InstalledSoftware | Where-Object { $_.DisplayName -like "*$ProgramName*" }
 }
 
-# Function to install Google Chrome Enterprise
 function Install-ChromeEnterprise {
     $chromeFileName = if ([Environment]::Is64BitOperatingSystem) {
         'googlechromestandaloneenterprise64.msi'
@@ -84,7 +80,6 @@ function Install-ChromeEnterprise {
     }
 }
 
-# Function to install Google Credential Provider for Windows (GCPW)
 function Install-GCPW {
     $gcpwFileName = if ([Environment]::Is64BitOperatingSystem) {
         'gcpwstandaloneenterprise64.msi'
@@ -106,15 +101,20 @@ function Install-GCPW {
             if ($installProcess.ExitCode -eq 0) {
                 Write-Log "GCPW installed successfully." -Level "INFO"
 
-                # Set registry keys for enrollment token and allowed domains
+                # Set registry keys for enrollment token
                 $gcpwRegistryPath = 'HKLM:\SOFTWARE\Policies\Google\CloudManagement'
                 New-Item -Path $gcpwRegistryPath -Force -ErrorAction Stop
                 Set-ItemProperty -Path $gcpwRegistryPath -Name "EnrollmentToken" -Value $googleEnrollmentToken -ErrorAction Stop
 
-                Set-ItemProperty -Path "HKLM:\Software\Google\GCPW" -Name "domains_allowed_to_login" -Value $domainsAllowedToLogin
-                $domains = Get-ItemPropertyValue -Path "HKLM:\Software\Google\GCPW" -Name "domains_allowed_to_login"
-                if ($domains -eq $domainsAllowedToLogin) {
-                    Write-Log 'Domains have been set.' -Level "INFO"
+                # Set domain registry key only if $domainsAllowedToLogin is not null
+                if ($domainsAllowedToLogin) {
+                    Set-ItemProperty -Path "HKLM:\Software\Google\GCPW" -Name "domains_allowed_to_login" -Value $domainsAllowedToLogin
+                    $domains = Get-ItemPropertyValue -Path "HKLM:\Software\Google\GCPW" -Name "domains_allowed_to_login"
+                    if ($domains -eq $domainsAllowedToLogin) {
+                        Write-Log 'Domains have been set.' -Level "INFO"
+                    }
+                } else {
+                    Write-Log 'No domains provided. Skipping domain configuration.' -Level "INFO"
                 }
             } else {
                 Write-Log "Failed to install GCPW. Exit code: $($installProcess.ExitCode)" -Level "ERROR"
@@ -125,7 +125,6 @@ function Install-GCPW {
     }
 }
 
-# Function to install Google Drive File Stream
 function Install-GoogleDrive {
     $driveFileName = 'GoogleDriveFSSetup.exe'
     $driveUrl = "https://dl.google.com/drive-file-stream/$driveFileName"

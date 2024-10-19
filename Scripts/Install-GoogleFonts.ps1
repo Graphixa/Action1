@@ -32,9 +32,9 @@ function Write-Log {
 # Parameters Section (Customizable)
 # ================================
 
-# Define the list of fonts to install seperated by a comma ( , )
+$fonts = ${Font List} # Define the list of fonts to install seperated by a comma ( , )
 # Example: "notosans, opensans, firasans, merriweather"
-$fonts = ${Font List}
+
 $tempDownloadFolder = "$env:TEMP\google_fonts"
 
 # ================================

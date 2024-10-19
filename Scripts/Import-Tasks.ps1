@@ -14,10 +14,7 @@
 
 $ProgressPreference = 'SilentlyContinue'
 
-# Split the provided paths/URLs into an array (assumes comma-separated URLs)
-$taskFiles = $("${Import Task Path}" -split ',').Trim() # Ensure trimming to remove any surrounding spaces
-
-# Define temp folder globally
+$taskFiles = $("${Import Task Path}" -split ',').Trim() # Split the provided paths/URLs into an array (assumes comma-separated URLs)
 $tempTaskFolder = "$env:TEMP\Action1Tasks"
 
 # ================================

@@ -1,3 +1,19 @@
+# ================================================
+# Printer Installation Script for Action1
+# ================================================
+# Description:
+#   - This script installs a printer using a TCP/IP port and installs the driver from a specified download.
+#   - It sets up the printer with default configurations, including paper size and color settings.
+#
+# Requirements:
+#   - Admin rights are required.
+#   - Internet access is required to download the driver.
+#
+
+# ================================================
+
+$ProgressPreference = 'SilentlyContinue'
+
 # Define Variables
 $PrinterIP = ${IP Address}
 $PrinterName = ${Printer Name}

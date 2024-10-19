@@ -3,11 +3,11 @@
 # ================================================
 # Description:
 #   - This script removes unwanted AppX packages and provisioned AppX packages to debloat Windows.
-#   - The AppX packages include pre-installed applications and store apps that are not necessary.
+#   - The AppX packages include pre-installed applications and store apps that are unnecessary or unwanted.
 #
 # Requirements:
 #   - Admin rights are required.
-#   - Script must be run with administrative privileges to remove AppX and provisioned packages.
+#   - The script must be run with administrative privileges to remove AppX and provisioned packages.
 # ================================================
 
 $ProgressPreference = 'SilentlyContinue'
@@ -15,6 +15,7 @@ $ProgressPreference = 'SilentlyContinue'
 # ================================
 # Logging Function: Write-Log
 # ================================
+
 function Write-Log {
     param (
         [string]$Message,

@@ -13,7 +13,7 @@
 
 $ProgressPreference = 'SilentlyContinue'
 
-$wingetConfigPath = "${Winget Configuration Path}"  # Provide URL or path for the Winget configuration file
+$wingetConfigPath = ${Winget Configuration Path}  # Provide URL or path for the Winget configuration file
 $downloadLatestVersions = ${Download Latest Versions}  # Boolean: 1 to download latest versions or 0 to download version info in configuration file
 
 $downloadLocation = "$env:temp\winget-import"  # Path to store the Winget config file temporarily, e.g., "$env:SystemDrive\Action1"
