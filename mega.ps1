@@ -4,33 +4,43 @@
 
 $ProgressPreference = 'SilentlyContinue'
 
-$CompanyPrefix = ${Computer Name Prefix}
-$PinMyDrive = ${Pin My Drive}
+# COMPUTER NAME PREFIX - e.g. MSFT for Microsoft
+$ComputerNamePrefix = "MSFT"
+
+# QUICKACCESS FOLDER SETTINGS
+$PinMyDrive = 1
 $SharedFolders = ${Shared Drives To Pin}
 
-$taskFiles = $("${Import Task Path}" -split ',').Trim() # Split the provided paths/URLs into an array (assumes comma-separated URLs)
+# TASK SCHEDULER IMPORT SETTINGS
+$XMLTaskFiles = ${Import Task Path} # Split the provided paths/URLs into an array (assumes comma-separated URLs)
 
+# WINGET CONFIG SETTINGS
 $wingetConfigPath = ${Winget Configuration Path}  # Provide URL or path for the Winget configuration file
 $downloadLatestVersions = ${Download Latest Versions}  # Boolean: 1 to download latest versions or 0 to download version info in configuration file
 
+# GOOGLE FONT SETTINGS
 $fonts = ${Font List} # Define the list of fonts to install seperated by a comma ( , )
 # Example: "notosans, opensans, firasans, merriweather"
 
+# GCPW SETTINGS
 $googleEnrollmentToken = ${Enrollment Token}
 $domainsAllowedToLogin = ${Domains Allowed To Login}
 
+# PRINTER SETTINGS
 $PrinterIP = ${IP Address}
 $PrinterName = ${Printer Name}
 $DriverFilesURL = "https://github.com/Graphixa/PCL6-Driver-for-Universal-Print/archive/refs/heads/main.zip"
 
+# BRANDING SETTINGS
 $wallpaperUrlOrPath = ${Wallpaper Path}
 $lockScreenUrlOrPath = ${LockScreenPath}  
-$downloadLocation = "$env:SystemDrive\Action1" # Path to download and keep wallpaper/lockscreen files *if required*
 
-# Define the URL or local path for the default app associations XML file
-$defaultAppAssocPath = ${XML File Path} # Replace this with your XML file's direct link.
 
-$taskbarSettingsPath = ${Taskbar Settings Path}
+# DEFAULT APP ASSOCAITION SETTINGS
+$defaultAppAssocPath = ${XML File Path} # Replace this with the URL or local path to a default app associations XML file
+
+# START MENU DEPLOYMENT SETTINGS
+$StartMenuBINFile = "https://github.com/Graphixa/Action1/blob/033eef21639ef91fbed0eabb184ba2ce46b32eb0/Configurations/start2.bin"  # Replace with your actual path or URL to Start2.bin file
 
 
 # Logging Function
@@ -178,8 +188,8 @@ $systemModel = (Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object 
 $isVM = $systemModel -match "Virtual|VMware|KVM|Hyper-V|VirtualBox"
 
 # Ensure there is a dash between the company prefix and computer type if a prefix is provided
-if ($CompanyPrefix) {
-    $CompanyPrefix += "-"
+if ($ComputerNamePrefix) {
+    $ComputerNamePrefix += "-"
 }
 
 # Test system type - WS = Workstation, NB = Notebook, VM = Virtual Machine
@@ -425,6 +435,7 @@ foreach (`$folder in `$foldersToPin) {
 function Import-TaskXML {
 
     $tempTaskFolder = "$env:TEMP\Tasks"
+    $taskFiles = $("$XMLTaskFiles" -split ',').Trim() # Split the provided paths/URLs into an array (assumes comma-separated URLs)
 
     function Import-Task {
         param (
@@ -1180,6 +1191,8 @@ function Install-PrinterRicoh {
 
 function Set-Branding {
 
+    $downloadLocation = "$env:SystemDrive\Squawk" # Path to download and keep wallpaper/lockscreen files *if required*
+
     function Get-Image {
         param (
             [string]$imagePath, # URL or path to the image file
@@ -1336,6 +1349,80 @@ function Set-RegistrySettings {
     }    
 }
 
+function Set-DefaultAppAssociations {
+
+    
+    # ================================
+    # Function: Download File
+    # ================================
+    function Download-File {
+        param (
+            [string]$fileURL, # URL to the file to be downloaded
+            [string]$destinationPath  # Local path where the file should be saved
+        )
+
+        try {
+            if ($fileURL -match "^https?://") {
+                Write-Log "Downloading file from remote URL: $fileURL" -Level "INFO"
+                Invoke-WebRequest -Uri $fileURL -OutFile $destinationPath -ErrorAction Stop
+            }
+            elseif (Test-Path $fileURL) {
+                Write-Log "Copying file from local/network path: $fileURL" -Level "INFO"
+                Copy-Item -Path $fileURL -Destination $destinationPath -Force
+            }
+            else {
+                throw "The file does not exist or is inaccessible: $fileURL"
+            }
+        }
+        catch {
+            Write-Log "Failed to download or copy the file: $($_.Exception.Message)" -Level "ERROR"
+            throw
+        }
+    }
+
+    # ================================
+    # Main Script Logic
+    # ================================
+    try {
+        # Define the temp folder for the downloaded XML file
+        $tempFolder = "$env:TEMP\Action1Files"
+        if (-not (Test-Path $tempFolder)) {
+            New-Item -Path $tempFolder -ItemType Directory -Force | Out-Null
+        }
+        $xmlFilePath = Join-Path $tempFolder "DefaultAppAssoc.xml"
+
+        # Download the default app associations XML file
+        Download-File -fileURL $defaultAppAssocPath -destinationPath $xmlFilePath
+
+        # Apply the default app associations using DISM
+        Write-Log "Applying default app associations using DISM." -Level "INFO"
+        try {
+            Start-Process dism.exe -ArgumentList "/Online /Import-DefaultAppAssociations:$xmlFilePath" -Wait -NoNewWindow
+            Write-Log "Default app associations applied successfully." -Level "INFO"
+        }
+        catch {
+            Write-Log "Failed to apply default app associations: $($_.Exception.Message)" -Level "ERROR"
+        }
+
+    }
+    catch {
+        Write-Log "An error occurred during script execution: $($_.Exception.Message)" -Level "ERROR"
+    }
+    finally {
+        # Clean up the temp folder
+        try {
+            if (Test-Path $tempFolder) {
+                Remove-Item -Path $tempFolder -Recurse -Force
+                Write-Log "Temporary files cleaned up." -Level "INFO"
+            }
+        }
+        catch {
+            Write-Log "Failed to clean up temp folder: $($_.Exception.Message)" -Level "ERROR"
+        }
+    }  
+    
+}
+
 function Install-MSOffice {
 
     # Set the URL for the Office Deployment Tool (ODT)
@@ -1392,10 +1479,88 @@ function Install-MSOffice {
     
 }
 
+function Set-StartMenuLayout {
+
+    
+    $tempBinPath = "$env:TEMP\Start2.bin"  # Temp file path for downloaded .bin file
+    $destFolderPath = "$env:SystemDrive\Users\Default\AppData\Local\Packages\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\LocalState"
+
+    try {
+        Write-Log "Starting the process to copy Start2.bin..." -Level "INFO"
+    
+        # Check if $StartMenuBINFile is a URL or a local/network path
+        if ($StartMenuBINFile -match '^http[s]?://') {
+            Write-Log "Downloading Start2.bin from URL: $StartMenuBINFile" -Level "INFO"
+            try {
+                Invoke-WebRequest -Uri $StartMenuBINFile -OutFile $tempBinPath -UseBasicParsing
+                Write-Log "Download completed successfully." -Level "INFO"
+            }
+            catch {
+                Write-Log "Failed to download Start2.bin: $($_.Exception.Message)" -Level "ERROR"
+                return
+            }
+        }
+        elseif (Test-Path $StartMenuBINFile) {
+            # Use local or network path directly
+            Write-Log "Using local/network Start2.bin file: $StartMenuBINFile" -Level "INFO"
+            $tempBinPath = $StartMenuBINFile
+        }
+        else {
+            Write-Log "Invalid file path or URL: $StartMenuBINFile" -Level "ERROR"
+            return
+        }
+
+    }
+    catch {
+        Write-Log "Pre-check failed: $($_.Exception.Message)" -Level "ERROR"
+        return
+    }
+
+    # ================================
+    # Main Script Logic
+    # ================================
+    try {
+        # Create the destination folder if it doesn't exist
+        Write-Log "Creating destination folder if it doesn't exist: $destFolderPath" -Level "INFO"
+        New-Item -ItemType "directory" -Path $destFolderPath -Force | Out-Null
+    
+        # Copy the Start2.bin file to the destination
+        Write-Log "Copying Start2.bin to $destFolderPath" -Level "INFO"
+        Copy-Item -Path $tempBinPath -Destination "$destFolderPath\Start2.bin" -Force | Out-Null
+        Write-Log "Start2.bin copied successfully." -Level "INFO"
+    
+    }
+    catch {
+        Write-Log "An error occurred while copying Start2.bin: $($_.Exception.Message)" -Level "ERROR"
+        return
+    }
+
+    # Cleanup Files
+    try {
+        Write-Log "Cleaning up temporary files..." -LogFilePath $LogFilePath -Level "INFO"
+    
+        # If the .bin was downloaded, remove the temp file
+        if ($StartMenuBINFile -match '^http[s]?://') {
+            Remove-Item -Path $tempBinPath -Force -ErrorAction SilentlyContinue
+            Write-Log "Temporary files removed." -LogFilePath $LogFilePath -Level "INFO"
+        }
+
+    }
+    catch {
+        Write-Log "Failed to clean up temporary files: $($_.Exception.Message)" -LogFilePath $LogFilePath -Level "ERROR"
+    }
+
+    
+}
+
 # Main
 Set-ComputerName
 Remove-Bloatware
 Install-GoogleMDM
+Set-Branding
+Set-RegistrySettings
+Set-StartMenuLayout
+Set-DefaultAppAssociations
 Install-AppsFromConfig
 Install-Missive
 Install-MSOffice
@@ -1403,5 +1568,3 @@ Install-GoogleFonts
 Import-TaskXML
 Add-QuickAccessScript
 Install-PrinterRicoh
-Set-Branding
-Set-RegistrySettings
