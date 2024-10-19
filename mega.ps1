@@ -373,7 +373,7 @@ function Add-QuickAccessScript {
         $foldersToPin += $sharedDriveFolders
     }
 
-    # If no folders were provided, log and exit
+    # If no folders were provided, log and return
     if (-not $foldersToPin) {
         Write-Log "No folders specified to pin. Exiting script." -Level "WARN"
         return
