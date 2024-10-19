@@ -9,7 +9,7 @@
 [x] Set branding Lockscreen + wallpaper from URL / Network Share
 [x] Remove OneDrive
 [x] Disable Copilot
-[] Set Taskbar For Users from configuration from remote share (google drive)
+[] Set Taskbar For Users from configuration from remote share
 [] Deploy start menu start2.bin file from remote share
 [x] Set theme REGISTRY entries
 [x] Download and install Tasks
