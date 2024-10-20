@@ -1,0 +1,67 @@
+{
+    "Packages": [
+        {
+            "Id": "Git.Git"
+        },
+        {
+            "Id": "geeksoftwareGmbH.PDF24Creator"
+        },
+        {
+            "Id": "Bitwarden.Bitwarden"
+        },
+        {
+            "Id": "Beeftext.Beeftext"
+        },
+        {
+            "Id": "Audacity.Audacity"
+        },
+        {
+            "Id": "Apple.iTunes"
+        },
+        {
+            "Id": "Asana.Asana"
+        },
+        {
+            "Id": "Adobe.Acrobat.Reader.64-bit"
+        },
+        {
+            "Id": "7zip.7zip"
+        },
+        {
+            "Id": "Google.ChromeRemoteDesktopHost"
+        },
+        {
+            "Id": "Grammarly.Grammarly"
+        },
+        {
+            "Id": "Grammarly.Grammarly.Office"
+        },
+        {
+            "Id": "Google.GoogleDrive"
+        },
+        {
+            "Id": "IObit.DriverBooster"
+        },
+        {
+            "Id": "Levitsky.FontBase"
+        },
+        {
+            "Id": "LocalSend.LocalSend"
+        },
+        {
+            "Id": "MonkiLabs.Notejoy"
+        },
+        {
+            "Id": "NickeManarin.ScreenToGif"
+        },
+        {
+            "Id": "OliverSchwendener.ueli"
+        },
+        {
+            "Id": "Spotify.Spotify"
+        },
+        {
+            "Id": "VideoLAN.VLC"
+        }
+    ]
+}
