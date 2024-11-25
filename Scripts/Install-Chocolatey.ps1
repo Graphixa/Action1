@@ -2,11 +2,11 @@
 # PowerShell Script Template for Action1
 # ================================================
 # Description:
-#   - Provide a brief description of the script's purpose.
-#   - Example: This script installs and configures the XYZ software.
+#   - This script installs Chocolatey Package Manager.
 #
 # Requirements:
-#   - List any prerequisites or requirements (e.g., internet access, admin rights).
+#   - Internet access.
+#   - Administrator rights.
 # ================================================
 
 $ProgressPreference = 'SilentlyContinue'
@@ -31,48 +31,56 @@ function Write-Log {
 # ================================
 # Parameters Section (Customizable)
 # ================================
-# Define any custom parameters here.
+# Define any custom parameters here if needed.
 
-$softwareName = 'SoftwareName'  # Placeholder for software name
-$installPath = "$env:SystemDrive\Program Files\$softwareName"
+$softwareName = 'Chocolatey'  # Name of the software
 $tempPath = "$env:SystemDrive\Temp\"
 
 # ================================
 # Pre-Check Section (Optional)
 # ================================
-# Use this section for pre-checks.
-# Example: Check if the software is already installed, exit if no action is required.
 
-try {
-    # Example pre-check (modify as needed)
-    Write-Log "Performing pre-checks..." -Level "INFO"
-    # Add your pre-check logic here.
-} catch {
-    Write-Log "Pre-check failed: $($_.Exception.Message)" -Level "ERROR"
-    return
+Write-Log "Chocolatey Pre-Installation Check..." -Level "INFO"
+
+# Check if Chocolatey is already installed
+if (Get-Command choco -ErrorAction SilentlyContinue) {
+    Write-Log "Chocolatey is already installed. No further action required." -Level "INFO"
+    exit
 }
 
 # ================================
 # Main Script Logic
 # ================================
-# Add your main logic for downloading, installing, configuring, etc.
+function Install-Chocolatey {
+    Write-Log "Installing Chocolatey Package Manager..." -Level "INFO"
+    try {
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+        Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+        Write-Log "Chocolatey Package Manager installed successfully." -Level "INFO"
+    } catch {
+        Write-Log "Failed to install Chocolatey Package Manager: $($_.Exception.Message)" -Level "ERROR"
+        return
+    }
+}
 
+# Execute Chocolatey Installation
 try {
-    Write-Log "Executing main script logic..." -Level "INFO"
-    # Add your main script logic here (e.g., downloading, installing).
+    Install-Chocolatey
 } catch {
-    Write-Log "An error occurred during the main script logic: $($_.Exception.Message)" -Level "ERROR"
+    Write-Log "An error occurred during Chocolatey installation: $($_.Exception.Message)" -Level "ERROR"
     return
 }
 
 # ================================
 # Cleanup Section
 # ================================
-# Clean up temporary files or logs here.
-
 try {
     Write-Log "Cleaning up temporary files..." -Level "INFO"
-    # Add your cleanup logic here (e.g., removing temp files).
+    if (Test-Path $tempPath) {
+        Remove-Item -Path $tempPath -Recurse -Force
+        Write-Log "Temporary files cleaned up successfully." -Level "INFO"
+    }
 } catch {
     Write-Log "Failed to clean up temporary files: $($_.Exception.Message)" -Level "ERROR"
 }

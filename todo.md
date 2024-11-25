@@ -41,7 +41,7 @@ TO ADD TO CUSTOM REPOSITORY
 [] ueli
 [] Driver Booster
 [] Fontbase
-[] LocalSend
+[x] LocalSend (NOT WORKING THOUGH)
 [] Notejoy
 [] Screen2Gif
 [x] Beeftext
