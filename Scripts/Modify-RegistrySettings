@@ -1,0 +1,138 @@
+# ================================================
+# Modify Registry Settings Script for Action1
+# ================================================
+# Description:
+#   - This script manages registry keys by creating, modifying, or deleting them
+#     on a remote system.
+#
+# Requirements:
+#   - Admin rights required.
+#   - Designed to run on Windows systems.
+# ================================================
+
+$ProgressPreference = 'SilentlyContinue'
+
+# ================================
+# Logging Function: Write-Log
+# ================================
+function Write-Log {
+    param (
+        [string]$Message,
+        [string]$LogFilePath = "$env:SystemDrive\Logs\Action1.log", # Default log file path
+        [string]$Level = "INFO"  # Log level: INFO, WARN, ERROR
+    )
+    
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logMessage = "[$timestamp] [$Level] $Message"
+
+    # Ensure the directory for the log file exists
+    $logFileDirectory = Split-Path -Path $LogFilePath -Parent
+    if (!(Test-Path -Path $logFileDirectory)) {
+        try {
+            New-Item -Path $logFileDirectory -ItemType Directory -Force | Out-Null
+        } catch {
+            Write-Error "Failed to create log file directory: $logFileDirectory. $_"
+            return
+        }
+    }
+    
+    # Write log entry to the log file
+    Add-Content -Path $LogFilePath -Value $logMessage
+
+    # Write output to Action1 host
+    Write-Output "$Message"
+}
+
+# ================================
+# Function: RegistryTouch
+# ================================
+function RegistryTouch {
+    param (
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("add", "remove")]
+        [string]$action,
+
+        [Parameter(Mandatory = $true)]
+        [string]$path,
+
+        [Parameter(Mandatory = $true)]
+        [string]$name,
+
+        [Parameter()]
+        [ValidateSet("String", "ExpandString", "Binary", "DWord", "MultiString", "QWord")]
+        [string]$type = "String",  # Default to String
+
+        [Parameter()]
+        [object]$value  # Object type to handle various data types
+    )
+
+    try {
+        # Detect and handle registry hive and path
+        switch -regex ($path) {
+            '^HKLM:\\|^HKEY_LOCAL_MACHINE\\' { $baseKey = "HKLM:"; $pathWithoutHive = $path -replace '^HKLM:\\|^HKEY_LOCAL_MACHINE\\', '' }
+            '^HKCU:\\|^HKEY_CURRENT_USER\\' { $baseKey = "HKCU:"; $pathWithoutHive = $path -replace '^HKCU:\\|^HKEY_CURRENT_USER\\', '' }
+            '^HKCR:\\|^HKEY_CLASSES_ROOT\\' { $baseKey = "HKCR:"; $pathWithoutHive = $path -replace '^HKCR:\\|^HKEY_CLASSES_ROOT\\', '' }
+            '^HKU:\\|^HKEY_USERS\\' { $baseKey = "HKU:"; $pathWithoutHive = $path -replace '^HKU:\\|^HKEY_USERS\\', '' }
+            '^HKCC:\\|^HKEY_CURRENT_CONFIG\\' { $baseKey = "HKCC:"; $pathWithoutHive = $path -replace '^HKCC:\\|^HKEY_CURRENT_CONFIG\\', '' }
+            default {
+                Write-Log "Unsupported registry hive in path: $path" -Level "WARN"
+                return
+            }
+        }
+
+        # Build full registry path and ensure parent keys exist
+        $fullKeyPath = $baseKey
+        $subKeyParts = $pathWithoutHive -split "\\"
+        foreach ($part in $subKeyParts) {
+            $fullKeyPath = Join-Path $fullKeyPath $part
+            if (-not (Test-Path $fullKeyPath)) {
+                New-Item -Path $fullKeyPath -Force -ErrorAction Stop | Out-Null
+            }
+        }
+
+        # Handle registry actions
+        if ($action -eq "add") {
+            if (-not (Test-Path $fullKeyPath -Name $name)) {
+                Write-Log "Adding registry value: $name with value: $value" -Level "INFO"
+                New-ItemProperty -Path $fullKeyPath -Name $name -Value $value -PropertyType $type -Force | Out-Null
+            } else {
+                Write-Log "Registry value $name already exists. Updating if necessary." -Level "INFO"
+                Set-ItemProperty -Path $fullKeyPath -Name $name -Value $value -Force | Out-Null
+            }
+        } elseif ($action -eq "remove") {
+            if (Test-Path $fullKeyPath -Name $name) {
+                Write-Log "Removing registry value: $name from $fullKeyPath" -Level "INFO"
+                Remove-ItemProperty -Path $fullKeyPath -Name $name -Force | Out-Null
+            } else {
+                Write-Log "Registry value $name not found. Skipping removal." -Level "WARN"
+            }
+        }
+    } catch {
+        Write-Log "Error in RegistryTouch: $($_.Exception.Message)" -Level "ERROR"
+    }
+}
+
+# ================================
+# Parameters Section
+# ================================
+# Define registry modifications below. Example:
+$registryAction = "add"  # Specify "add" or "remove"
+$registryPath = "HKLM:\SOFTWARE\MyApp"
+$registryName = "MySetting"
+$registryType = "DWord"  # Example: DWord, String, etc.
+$registryValue = 1  # Value to be set for "add" action
+
+# ================================
+# Main Script Logic
+# ================================
+try {
+    Write-Log "Starting registry modification..." -Level "INFO"
+    RegistryTouch -action $registryAction -path $registryPath -name $registryName -type $registryType -value $registryValue
+    Write-Log "Registry modification completed successfully." -Level "INFO"
+} catch {
+    Write-Log "Error occurred during registry modification: $($_.Exception.Message)" -Level "ERROR"
+}
+
+# ================================
+# End of Script
+# ================================
