@@ -22,7 +22,7 @@ $TempDownloadFolder = "$env:TEMP"
 $DownloadURL = "https://github.com/Graphixa/PCL6-Driver-for-Universal-Print/archive/refs/heads/main.zip"
 $DownloadFileName = "$TempDownloadFolder\PCL6-Driver.zip"
 $DownloadPath = "$TempDownloadFolder\PCL6-Driver"
-$TempExtractPath = "$TempDownloadFolder\TempArchive"
+$TempExtractPath = "$TempDownloadFolder\DriverFiles"
 
 # Logging Function
 function Write-Log {
