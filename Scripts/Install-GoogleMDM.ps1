@@ -22,15 +22,29 @@ $domainsAllowedToLogin = ${Domains Allowed To Login}
 function Write-Log {
     param (
         [string]$Message,
-        [string]$LogFilePath = "$env:SystemDrive\LST-Action1.log",
+        [string]$LogFilePath = "$env:SystemDrive\Logs\Action1.log", # Default log file path
         [string]$Level = "INFO"  # Log level: INFO, WARN, ERROR
     )
     
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $logMessage = "[$timestamp] [$Level] $Message"
+
+    # Ensure the directory for the log file exists
+    $logFileDirectory = Split-Path -Path $LogFilePath -Parent
+    if (!(Test-Path -Path $logFileDirectory)) {
+        try {
+            New-Item -Path $logFileDirectory -ItemType Directory -Force | Out-Null
+        } catch {
+            Write-Error "Failed to create log file directory: $logFileDirectory. $_"
+            return
+        }
+    }
     
     # Write log entry to the log file
     Add-Content -Path $LogFilePath -Value $logMessage
+
+    # Write output to Action1 host
+    Write-Output "$Message"
 }
 
 # ================================

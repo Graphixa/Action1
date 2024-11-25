@@ -20,16 +20,30 @@ $tempPath = "$env:Temp"  # Temporary path for script use
 # ================================
 function Write-Log {
     param (
-        [Parameter(Mandatory = $true)]
         [string]$Message,
-        [ValidateSet("INFO", "ERROR", "WARN")]
-        [string]$Level = "INFO"
+        [string]$LogFilePath = "$env:SystemDrive\Logs\Action1.log", # Default log file path
+        [string]$Level = "INFO"  # Log level: INFO, WARN, ERROR
     )
-    $logFile = "$env:SystemDrive\Action1.log"
-    $timestamp = Get-Date -Format "dd-MM-yyyy HH:mm:ss"
+    
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $logMessage = "[$timestamp] [$Level] $Message"
-    Add-Content -Path $logFile -Value $logMessage
-    Write-Output "$timestamp - $Message"
+
+    # Ensure the directory for the log file exists
+    $logFileDirectory = Split-Path -Path $LogFilePath -Parent
+    if (!(Test-Path -Path $logFileDirectory)) {
+        try {
+            New-Item -Path $logFileDirectory -ItemType Directory -Force | Out-Null
+        } catch {
+            Write-Error "Failed to create log file directory: $logFileDirectory. $_"
+            return
+        }
+    }
+    
+    # Write log entry to the log file
+    Add-Content -Path $LogFilePath -Value $logMessage
+
+    # Write output to Action1 host
+    Write-Output "$Message"
 }
 
 # ================================
