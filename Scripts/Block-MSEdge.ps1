@@ -46,6 +46,59 @@ function Write-Log {
     Write-Output "$Message"
 }
 
+# =========================================
+# Jingle Function - Plays Upon Completion
+# =========================================
+function Play-Jingle {
+    param (
+        [string]$AudioUrl = "https://github.com/Graphixa/Action1/raw/refs/heads/main/Success.wav",  # URL to WAV file
+        [string]$LocalFilePath = "$env:TEMP\Success.wav"  # Local path to save the file
+    )
+
+    # Step 1: Download the file if it doesn't exist locally
+    if (-not (Test-Path $LocalFilePath)) {
+        try {
+            Write-Output "Downloading audio file from $AudioUrl..."
+            Invoke-WebRequest -Uri $AudioUrl -OutFile $LocalFilePath
+            Write-Output "Audio file downloaded successfully to $LocalFilePath."
+        } catch {
+            Write-Output "Failed to download audio file. Error: $($_.Exception.Message)"
+            return
+        }
+    } else {
+        Write-Output "Audio file already exists locally at $LocalFilePath. Skipping download."
+    }
+
+    # Step 2: Validate the downloaded file
+    if (-not (Test-Path $LocalFilePath)) {
+        Write-Output "Audio file not found at $LocalFilePath. Cannot play audio."
+        return
+    }
+
+    # Step 3: Play the audio file
+    try {
+        Write-Output "Playing audio file: $LocalFilePath"
+
+        # Add the required .NET assembly for MediaPlayer
+        Add-Type -AssemblyName presentationCore
+
+        # Initialize MediaPlayer
+        (New-Object System.Media.SoundPlayer "$LocalFilePath").Play()
+
+        # Wait for playback to complete
+        Start-Sleep -Milliseconds 50
+        do {
+            $previousPosition = $currentPosition
+            $currentPosition = $mediaPlayer.Position.Ticks
+            Start-Sleep -Milliseconds 50
+        } while ($currentPosition -ne $previousPosition)
+
+        Write-Output "Audio playback completed."
+    } catch {
+        Write-Output "Failed to play audio file. Error: $($_.Exception.Message)"
+    }
+}
+
 # ================================
 # Verify if the application exists
 # ================================
@@ -81,6 +134,7 @@ try {
         -Description "Blocks outbound traffic for Microsoft Edge."
 
     Write-Log -Message "Firewall rules created successfully to block Microsoft Edge."
+    Play-Jingle
 } catch {
     Write-Log -Message "An error occurred while creating firewall rules: $_" -LogLevel "ERROR"
     throw $_
