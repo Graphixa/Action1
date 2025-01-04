@@ -49,7 +49,7 @@ function Write-Log {
 # =========================================
 # Jingle Function - Plays Upon Completion
 # =========================================
-function Play-Jingle {
+function Play-Notification {
     param (
         [string]$AudioUrl = "https://github.com/Graphixa/Action1/raw/refs/heads/main/Success.wav",  # URL to WAV file
         [string]$LocalFilePath = "$env:TEMP\Success.wav"  # Local path to save the file
@@ -134,7 +134,7 @@ try {
         -Description "Blocks outbound traffic for Microsoft Edge."
 
     Write-Log -Message "Firewall rules created successfully to block Microsoft Edge."
-    Play-Jingle
+    Play-Notification
 } catch {
     Write-Log -Message "An error occurred while creating firewall rules: $_" -LogLevel "ERROR"
     throw $_
