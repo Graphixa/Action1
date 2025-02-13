@@ -11,9 +11,7 @@
 
 $ProgressPreference = 'SilentlyContinue'
 
-# ================================
-# Logging Function: Write-Log
-# ================================
+
 function Write-Log {
     param (
         [string]$Message,
@@ -34,6 +32,16 @@ function Write-Log {
             return
         }
     }
+
+    # Check log file size and recreate if too large
+    if (Test-Path -Path $LogFilePath) {
+        $logSize = (Get-Item -Path $LogFilePath -ErrorAction Stop).Length
+        if ($logSize -ge 5242880) {
+            Remove-Item -Path $LogFilePath -Force -ErrorAction Stop | Out-Null
+            Out-File -FilePath $LogFilePath -Encoding utf8 -ErrorAction Stop
+            Add-Content -Path $LogFilePath -Value "[$timestamp] [INFO] The log file exceeded the 5 MB limit and was deleted and recreated."
+        }
+    }
     
     # Write log entry to the log file
     Add-Content -Path $LogFilePath -Value $logMessage
@@ -42,17 +50,8 @@ function Write-Log {
     Write-Output "$Message"
 }
 
-# ================================
-# Parameters Section (Customizable)
-# ================================
-# Define any custom parameters here if needed.
-
-$softwareName = 'Chocolatey'  # Name of the software
 $tempPath = "$env:SystemDrive\Temp\"
 
-# ================================
-# Pre-Check Section (Optional)
-# ================================
 
 Write-Log "Chocolatey Pre-Installation Check..." -Level "INFO"
 
@@ -62,9 +61,6 @@ if (Get-Command choco -ErrorAction SilentlyContinue) {
     exit
 }
 
-# ================================
-# Main Script Logic
-# ================================
 function Install-Chocolatey {
     Write-Log "Installing Chocolatey Package Manager..." -Level "INFO"
     try {
@@ -78,7 +74,10 @@ function Install-Chocolatey {
     }
 }
 
-# Execute Chocolatey Installation
+# ================================
+# Main Script Logic
+# ================================
+
 try {
     Install-Chocolatey
 } catch {
@@ -86,9 +85,8 @@ try {
     return
 }
 
-# ================================
-# Cleanup Section
-# ================================
+
+# Cleanup Temporary Files
 try {
     Write-Log "Cleaning up temporary files..." -Level "INFO"
     if (Test-Path $tempPath) {
@@ -98,7 +96,3 @@ try {
 } catch {
     Write-Log "Failed to clean up temporary files: $($_.Exception.Message)" -Level "ERROR"
 }
-
-# ================================
-# End of Script
-# ================================

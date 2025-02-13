@@ -17,9 +17,6 @@ $wallpaperUrlOrPath = ${Wallpaper Path}
 $lockScreenUrlOrPath = ${LockScreenPath}  
 $downloadLocation = "$env:SystemDrive\Action1" # Path to download and keep wallpaper/lockscreen files *if required*
 
-# ================================
-# Logging Function: Write-Log
-# ================================
 function Write-Log {
     param (
         [string]$Message,
@@ -40,6 +37,16 @@ function Write-Log {
             return
         }
     }
+
+    # Check log file size and recreate if too large
+    if (Test-Path -Path $LogFilePath) {
+        $logSize = (Get-Item -Path $LogFilePath -ErrorAction Stop).Length
+        if ($logSize -ge 5242880) {
+            Remove-Item -Path $LogFilePath -Force -ErrorAction Stop | Out-Null
+            Out-File -FilePath $LogFilePath -Encoding utf8 -ErrorAction Stop
+            Add-Content -Path $LogFilePath -Value "[$timestamp] [INFO] The log file exceeded the 5 MB limit and was deleted and recreated."
+        }
+    }
     
     # Write log entry to the log file
     Add-Content -Path $LogFilePath -Value $logMessage
@@ -48,11 +55,7 @@ function Write-Log {
     Write-Output "$Message"
 }
 
-# ================================
-# RegistryTouch Function to Add or Remove Registry Entries
-# ================================
-
-function RegistryTouch {
+function Set-RegistryModification {
     param (
         [Parameter(Mandatory = $true)]
         [ValidateSet("add", "remove")]
@@ -165,9 +168,7 @@ function RegistryTouch {
     }
 }
 
-# ================================
-# Download Image Function
-# ================================
+
 function Get-Image {
     param (
         [string]$imagePath,   # URL or path to the image file
@@ -211,9 +212,9 @@ try {
             Write-Log "Setting wallpaper to: $localWallpaperPath"
 
             $registryPath = "HKLM:\Software\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
-            RegistryTouch -action add -path $registryPath -name "DesktopImagePath" -type "String" -value $localWallpaperPath
-            RegistryTouch -action add -path $registryPath -name "DesktopImageUrl" -type "String" -value $localWallpaperPath
-            RegistryTouch -action add -path $registryPath -name "DesktopImageStatus" -type "DWord" -value 1
+            Set-RegistryModification -action add -path $registryPath -name "DesktopImagePath" -type "String" -value $localWallpaperPath
+            Set-RegistryModification -action add -path $registryPath -name "DesktopImageUrl" -type "String" -value $localWallpaperPath
+            Set-RegistryModification -action add -path $registryPath -name "DesktopImageStatus" -type "DWord" -value 1
             Write-Log "Wallpaper set successfully." -Level "INFO"
         } catch {
             Write-Log "Error setting wallpaper: $($_.Exception.Message)" -Level "ERROR"
@@ -229,9 +230,9 @@ try {
             Write-Log "Setting lock screen image to: $localLockScreenPath"
 
             $registryPath = "HKLM:\Software\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
-            RegistryTouch -action add -path $registryPath -name "LockScreenImagePath" -type "String" -value $localLockScreenPath
-            RegistryTouch -action add -path $registryPath -name "LockScreenImageUrl" -type "String" -value $localLockScreenPath
-            RegistryTouch -action add -path $registryPath -name "LockScreenImageStatus" -type "DWord" -value 1
+            Set-RegistryModification -action add -path $registryPath -name "LockScreenImagePath" -type "String" -value $localLockScreenPath
+            Set-RegistryModification -action add -path $registryPath -name "LockScreenImageUrl" -type "String" -value $localLockScreenPath
+            Set-RegistryModification -action add -path $registryPath -name "LockScreenImageStatus" -type "DWord" -value 1
             Write-Log "Lock screen image set successfully." -Level "INFO"
         } catch {
             Write-Log "Error setting lock screen image: $($_.Exception.Message)" -Level "ERROR"

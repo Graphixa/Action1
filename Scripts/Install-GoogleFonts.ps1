@@ -11,9 +11,13 @@
 
 $ProgressPreference = 'SilentlyContinue'
 
-# ================================
-# Logging Function: Write-Log
-# ================================
+
+$fonts = ${Font List} # Define the list of fonts to install seperated by a comma ( , )
+# Example: "notosans, opensans, firasans, merriweather"
+
+$tempDownloadFolder = "$env:TEMP\google_fonts"
+
+
 function Write-Log {
     param (
         [string]$Message,
@@ -34,6 +38,16 @@ function Write-Log {
             return
         }
     }
+
+    # Check log file size and recreate if too large
+    if (Test-Path -Path $LogFilePath) {
+        $logSize = (Get-Item -Path $LogFilePath -ErrorAction Stop).Length
+        if ($logSize -ge 5242880) {
+            Remove-Item -Path $LogFilePath -Force -ErrorAction Stop | Out-Null
+            Out-File -FilePath $LogFilePath -Encoding utf8 -ErrorAction Stop
+            Add-Content -Path $LogFilePath -Value "[$timestamp] [INFO] The log file exceeded the 5 MB limit and was deleted and recreated."
+        }
+    }
     
     # Write log entry to the log file
     Add-Content -Path $LogFilePath -Value $logMessage
@@ -41,19 +55,6 @@ function Write-Log {
     # Write output to Action1 host
     Write-Output "$Message"
 }
-
-# ================================
-# Parameters Section (Customizable)
-# ================================
-
-$fonts = ${Font List} # Define the list of fonts to install seperated by a comma ( , )
-# Example: "notosans, opensans, firasans, merriweather"
-
-$tempDownloadFolder = "$env:TEMP\google_fonts"
-
-# ================================
-# Main Script Logic
-# ================================
 
 # Function to check if a font is installed
 function Test-FontInstalled {
@@ -121,6 +122,10 @@ function RegistryTouch {
         New-ItemProperty -Path $path -Name $name -Value $value -PropertyType $type -Force
     }
 }
+
+# ================================
+# Main Script Logic
+# ================================
 
 # Split fonts list into an array
 $fontsList = $fonts -split ',' | ForEach-Object { $_.Trim().ToLower() }

@@ -12,16 +12,11 @@
 
 $ProgressPreference = 'SilentlyContinue'
 
-# ================================
-# Parameters Section (Customizable)
-# ================================
-$StartMenuBINFile = {Start Menu BIN File}  # Replace with your actual path or URL
+$StartMenuBINFile = ${Start Menu BIN File}  # Replace with your actual path or URL
 $tempBinPath = "$env:TEMP\Start2.bin"  # Temp file path for downloaded .bin file
 $destFolderPath = "$env:SystemDrive\Users\Default\AppData\Local\Packages\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\LocalState"
 
-# ================================
-# Logging Function: Write-Log
-# ================================
+
 function Write-Log {
     param (
         [string]$Message,
@@ -42,6 +37,16 @@ function Write-Log {
             return
         }
     }
+
+    # Check log file size and recreate if too large
+    if (Test-Path -Path $LogFilePath) {
+        $logSize = (Get-Item -Path $LogFilePath -ErrorAction Stop).Length
+        if ($logSize -ge 5242880) {
+            Remove-Item -Path $LogFilePath -Force -ErrorAction Stop | Out-Null
+            Out-File -FilePath $LogFilePath -Encoding utf8 -ErrorAction Stop
+            Add-Content -Path $LogFilePath -Value "[$timestamp] [INFO] The log file exceeded the 5 MB limit and was deleted and recreated."
+        }
+    }
     
     # Write log entry to the log file
     Add-Content -Path $LogFilePath -Value $logMessage
@@ -50,9 +55,7 @@ function Write-Log {
     Write-Output "$Message"
 }
 
-# ================================
-# Pre-Check
-# ================================
+
 try {
     Write-Log "Starting the process to copy Start2.bin..." -Level "INFO"
     
@@ -98,9 +101,7 @@ try {
     return
 }
 
-# ================================
-# Cleanup Files
-# ================================
+# Cleanup Temporary Files
 try {
     Write-Log "Cleaning up temporary files..." -LogFilePath $LogFilePath -Level "INFO"
     

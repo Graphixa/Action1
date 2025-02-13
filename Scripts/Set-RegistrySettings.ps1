@@ -12,9 +12,7 @@
 
 $ProgressPreference = 'SilentlyContinue'
 
-# ================================
-# Logging Function: Write-Log
-# ================================
+
 function Write-Log {
     param (
         [string]$Message,
@@ -35,6 +33,16 @@ function Write-Log {
             return
         }
     }
+
+    # Check log file size and recreate if too large
+    if (Test-Path -Path $LogFilePath) {
+        $logSize = (Get-Item -Path $LogFilePath -ErrorAction Stop).Length
+        if ($logSize -ge 5242880) {
+            Remove-Item -Path $LogFilePath -Force -ErrorAction Stop | Out-Null
+            Out-File -FilePath $LogFilePath -Encoding utf8 -ErrorAction Stop
+            Add-Content -Path $LogFilePath -Value "[$timestamp] [INFO] The log file exceeded the 5 MB limit and was deleted and recreated."
+        }
+    }
     
     # Write log entry to the log file
     Add-Content -Path $LogFilePath -Value $logMessage
@@ -43,11 +51,8 @@ function Write-Log {
     Write-Output "$Message"
 }
 
-# ================================
-# RegistryTouch Function to Add or Remove Registry Entries
-# ================================
 
-function RegistryTouch {
+function Set-RegistryModification {
     param (
         [Parameter(Mandatory = $true)]
         [ValidateSet("add", "remove")]
@@ -168,7 +173,7 @@ try {
     Write-Log "Setting Registry Items for System" -Level "INFO"
 
     # Disable OneDrive
-    RegistryTouch -action add -path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" -name "DisableFileSyncNGSC" -value 1 -type "DWord"
+    Set-RegistryModification -action add -path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" -name "DisableFileSyncNGSC" -value 1 -type "DWord"
     Write-Log "OneDrive disabled." -Level "INFO"
     try {
         Stop-Process -Name OneDrive -Force -ErrorAction SilentlyContinue
@@ -178,31 +183,31 @@ try {
     }
 
     # Disable Cortana
-    RegistryTouch -action add -path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -name "AllowCortana" -value 0 -type "DWord"
+    Set-RegistryModification -action add -path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -name "AllowCortana" -value 0 -type "DWord"
 
     # Disable CoPilot
-    RegistryTouch -action add -path "HKLM:\SOFTWARE\Policies\Microsoft\WindowsCopilot" -name "CopilotEnabled" -value 0 -type "DWord"
+    Set-RegistryModification -action add -path "HKLM:\SOFTWARE\Policies\Microsoft\WindowsCopilot" -name "CopilotEnabled" -value 0 -type "DWord"
 
     # Disable Privacy Experience (OOBE)
-    RegistryTouch -action add -path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OOBE" -name "DisablePrivacyExperience" -value 1 -type "DWord"
+    Set-RegistryModification -action add -path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OOBE" -name "DisablePrivacyExperience" -value 1 -type "DWord"
 
     # Disable 'Meet Now' in Taskbar
-    RegistryTouch -action add -path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -name "HideSCAMeetNow" -value 1 -type "DWord"
+    Set-RegistryModification -action add -path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -name "HideSCAMeetNow" -value 1 -type "DWord"
 
     # Disable News and Interests
-    RegistryTouch -action add -path "HKLM:\SOFTWARE\Policies\Microsoft\Dsh" -name "AllowNewsAndInterests" -value 0 -type "DWord"
+    Set-RegistryModification -action add -path "HKLM:\SOFTWARE\Policies\Microsoft\Dsh" -name "AllowNewsAndInterests" -value 0 -type "DWord"
 
     # Disable Personalized Advertising
-    RegistryTouch -action add -path "HKLM:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo" -name "Enabled" -value 0 -type "DWord"
+    Set-RegistryModification -action add -path "HKLM:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo" -name "Enabled" -value 0 -type "DWord"
 
     # Disable Start Menu Suggestions and Windows Advertising
-    RegistryTouch -action add -path "HKLM:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -name "SubscribedContent-338389Enabled" -value 0 -type "DWord"
+    Set-RegistryModification -action add -path "HKLM:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -name "SubscribedContent-338389Enabled" -value 0 -type "DWord"
 
     # Disable First Logon Animation
-    RegistryTouch -action add -path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -name "EnableFirstLogonAnimation" -value 0 -type "DWord"
+    Set-RegistryModification -action add -path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -name "EnableFirstLogonAnimation" -value 0 -type "DWord"
 
     # Disable Lock Screen App Notifications
-    RegistryTouch -action add -path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -name "DisableLockScreenAppNotifications" -value 1 -type "DWord"
+    Set-RegistryModification -action add -path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -name "DisableLockScreenAppNotifications" -value 1 -type "DWord"
 
     # Restart Explorer to apply changes
     try {

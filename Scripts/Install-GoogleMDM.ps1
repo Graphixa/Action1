@@ -16,9 +16,6 @@ Set-StrictMode -Version Latest
 $googleEnrollmentToken = ${Enrollment Token}
 $domainsAllowedToLogin = ${Domains Allowed To Login}
 
-# ================================
-# Logging Function: Write-Log
-# ================================
 function Write-Log {
     param (
         [string]$Message,
@@ -39,6 +36,16 @@ function Write-Log {
             return
         }
     }
+
+    # Check log file size and recreate if too large
+    if (Test-Path -Path $LogFilePath) {
+        $logSize = (Get-Item -Path $LogFilePath -ErrorAction Stop).Length
+        if ($logSize -ge 5242880) {
+            Remove-Item -Path $LogFilePath -Force -ErrorAction Stop | Out-Null
+            Out-File -FilePath $LogFilePath -Encoding utf8 -ErrorAction Stop
+            Add-Content -Path $LogFilePath -Value "[$timestamp] [INFO] The log file exceeded the 5 MB limit and was deleted and recreated."
+        }
+    }
     
     # Write log entry to the log file
     Add-Content -Path $LogFilePath -Value $logMessage
@@ -50,7 +57,6 @@ function Write-Log {
 # ================================
 # Main Script Logic
 # ================================
-
 function Test-ProgramInstalled {
     param(
         [string]$ProgramName

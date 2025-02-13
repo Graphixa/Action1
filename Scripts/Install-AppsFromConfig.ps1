@@ -19,9 +19,7 @@ $downloadLatestVersions = ${Download Latest Versions}  # Boolean: 1 to download 
 $downloadLocation = "$env:temp\winget-import"  # Path to store the Winget config file temporarily, e.g., "$env:SystemDrive\Action1"
 
 
-# ================================
-# Logging Function: Write-Log
-# ================================
+
 function Write-Log {
     param (
         [string]$Message,
@@ -42,6 +40,16 @@ function Write-Log {
             return
         }
     }
+
+    # Check log file size and recreate if too large
+    if (Test-Path -Path $LogFilePath) {
+        $logSize = (Get-Item -Path $LogFilePath -ErrorAction Stop).Length
+        if ($logSize -ge 5242880) {
+            Remove-Item -Path $LogFilePath -Force -ErrorAction Stop | Out-Null
+            Out-File -FilePath $LogFilePath -Encoding utf8 -ErrorAction Stop
+            Add-Content -Path $LogFilePath -Value "[$timestamp] [INFO] The log file exceeded the 5 MB limit and was deleted and recreated."
+        }
+    }
     
     # Write log entry to the log file
     Add-Content -Path $LogFilePath -Value $logMessage
@@ -50,9 +58,7 @@ function Write-Log {
     Write-Output "$Message"
 }
 
-# ================================
-# Function: Get-WinGetExecutable
-# ================================
+
 function Get-WinGetExecutable {
     $winget = Get-AppxPackage -AllUsers -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq 'Microsoft.DesktopAppInstaller' }
 
@@ -66,9 +72,7 @@ function Get-WinGetExecutable {
     }
 }
 
-# ================================
-# Function: Download or Access Winget Configuration File
-# ================================
+
 function Get-WingetConfigFile {
     param (
         [string]$configPath,   # URL or path to the configuration file
@@ -99,10 +103,8 @@ function Get-WingetConfigFile {
     }
 }
 
-# ================================
-# Function: Validate Winget Configuration File
-# ================================
-function Validate-WingetConfig {
+
+function Test-WingetConfig {
     param (
         [string]$configFile
     )
@@ -142,7 +144,7 @@ try {
     $wingetConfigFile = Get-WingetConfigFile -configPath $wingetConfigPath -fileName "winget-config.json"
 
     # Step 3: Validate the Winget configuration file
-    if (-not (Validate-WingetConfig -configFile $wingetConfigFile)) {
+    if (-not (Test-WingetConfig -configFile $wingetConfigFile)) {
         throw "The configuration file is invalid. Exiting script."
     }
 

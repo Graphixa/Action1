@@ -17,9 +17,6 @@ $ProgressPreference = 'SilentlyContinue'
 $taskFiles = $("${Import Task Path}" -split ',').Trim() # Split the provided paths/URLs into an array (assumes comma-separated URLs)
 $tempTaskFolder = "$env:TEMP\Action1Tasks"
 
-# ================================
-# Logging Function: Write-Log
-# ================================
 function Write-Log {
     param (
         [string]$Message,
@@ -40,6 +37,16 @@ function Write-Log {
             return
         }
     }
+
+    # Check log file size and recreate if too large
+    if (Test-Path -Path $LogFilePath) {
+        $logSize = (Get-Item -Path $LogFilePath -ErrorAction Stop).Length
+        if ($logSize -ge 5242880) {
+            Remove-Item -Path $LogFilePath -Force -ErrorAction Stop | Out-Null
+            Out-File -FilePath $LogFilePath -Encoding utf8 -ErrorAction Stop
+            Add-Content -Path $LogFilePath -Value "[$timestamp] [INFO] The log file exceeded the 5 MB limit and was deleted and recreated."
+        }
+    }
     
     # Write log entry to the log file
     Add-Content -Path $LogFilePath -Value $logMessage
@@ -48,9 +55,7 @@ function Write-Log {
     Write-Output "$Message"
 }
 
-# ================================
-# Function: Import Task File
-# ================================
+
 function Import-Task {
     param (
         [string]$taskFile    # Path or URL to the task file (XML)

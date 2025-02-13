@@ -15,9 +15,7 @@ $ProgressPreference = 'SilentlyContinue'
 # Define the URL or local path for the default app associations XML file
 $defaultAppAssocPath = ${XML File Path} # Replace this with your XML file's direct link.
 
-# ================================
-# Logging Function: Write-Log
-# ================================
+
 function Write-Log {
     param (
         [string]$Message,
@@ -38,6 +36,16 @@ function Write-Log {
             return
         }
     }
+
+    # Check log file size and recreate if too large
+    if (Test-Path -Path $LogFilePath) {
+        $logSize = (Get-Item -Path $LogFilePath -ErrorAction Stop).Length
+        if ($logSize -ge 5242880) {
+            Remove-Item -Path $LogFilePath -Force -ErrorAction Stop | Out-Null
+            Out-File -FilePath $LogFilePath -Encoding utf8 -ErrorAction Stop
+            Add-Content -Path $LogFilePath -Value "[$timestamp] [INFO] The log file exceeded the 5 MB limit and was deleted and recreated."
+        }
+    }
     
     # Write log entry to the log file
     Add-Content -Path $LogFilePath -Value $logMessage
@@ -46,10 +54,8 @@ function Write-Log {
     Write-Output "$Message"
 }
 
-# ================================
-# Function: Download File
-# ================================
-function Download-File {
+
+function Get-RemoteFile {
     param (
         [string]$fileURL,   # URL to the file to be downloaded
         [string]$destinationPath  # Local path where the file should be saved
@@ -83,7 +89,7 @@ try {
     $xmlFilePath = Join-Path $tempFolder "DefaultAppAssoc.xml"
 
     # Download the default app associations XML file
-    Download-File -fileURL $defaultAppAssocPath -destinationPath $xmlFilePath
+    Get-RemoteFile -fileURL $defaultAppAssocPath -destinationPath $xmlFilePath
 
     # Apply the default app associations using DISM
     Write-Log "Applying default app associations using DISM." -Level "INFO"

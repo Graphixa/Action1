@@ -14,17 +14,18 @@
 
 $ProgressPreference = 'SilentlyContinue'
 
-# Define Variables
+# Action1 Variables
 $PrinterIP = ${IP Address}
 $PrinterName = ${Printer Name}
-$PortName = "TCPPort:${PrinterIP}"
-$TempDownloadFolder = "$env:TEMP"
-$DownloadURL = "https://github.com/Graphixa/PCL6-Driver-for-Universal-Print/archive/refs/heads/main.zip"
-$DownloadFileName = "$TempDownloadFolder\PCL6-Driver.zip"
-$DownloadPath = "$TempDownloadFolder\PCL6-Driver"
-$TempExtractPath = "$TempDownloadFolder\DriverFiles"
 
-# Logging Function
+
+$PortName = "TCPPort:${PrinterIP}"
+$DownloadURL = "https://github.com/Graphixa/PCL6-Driver-for-Universal-Print/archive/refs/heads/main.zip"
+$DownloadFileName = "$env:TEMP\PCL6-Driver.zip"
+$DownloadPath = "$env:TEMP\PCL6-Driver"
+$TempExtractPath = "$env:TEMP\DriverFiles"
+
+
 function Write-Log {
     param (
         [string]$Message,
@@ -45,6 +46,16 @@ function Write-Log {
             return
         }
     }
+
+    # Check log file size and recreate if too large
+    if (Test-Path -Path $LogFilePath) {
+        $logSize = (Get-Item -Path $LogFilePath -ErrorAction Stop).Length
+        if ($logSize -ge 5242880) {
+            Remove-Item -Path $LogFilePath -Force -ErrorAction Stop | Out-Null
+            Out-File -FilePath $LogFilePath -Encoding utf8 -ErrorAction Stop
+            Add-Content -Path $LogFilePath -Value "[$timestamp] [INFO] The log file exceeded the 5 MB limit and was deleted and recreated."
+        }
+    }
     
     # Write log entry to the log file
     Add-Content -Path $LogFilePath -Value $logMessage
@@ -53,9 +64,13 @@ function Write-Log {
     Write-Output "$Message"
 }
 
+# ================================
+# Main Script Logic
+# ================================
+
 # Create $DownloadPath directory if it doesn't exist
 if (-not (Test-Path -Path $DownloadPath)) {
-    New-Item -Path $DownloadPath -ItemType Directory
+    New-Item -Path $DownloadPath -ItemType Directory -Force | Out-Null
     Write-Log "Created directory: $DownloadPath"
 } else {
     Write-Log "Directory already exists: $DownloadPath"
@@ -63,7 +78,7 @@ if (-not (Test-Path -Path $DownloadPath)) {
 
 # Create temporary extraction directory if it doesn't exist
 if (-not (Test-Path -Path $TempExtractPath)) {
-    New-Item -Path $TempExtractPath -ItemType Directory
+    New-Item -Path $TempExtractPath -ItemType Directory -Force | Out-Null
     Write-Log "Created temporary extraction directory: $TempExtractPath"
 } else {
     Write-Log "Temporary extraction directory already exists: $TempExtractPath"
@@ -71,9 +86,9 @@ if (-not (Test-Path -Path $TempExtractPath)) {
 
 # Download the ZIP file
 try {
-    Write-Log "Downloading file from: $DownloadURL"
+    Write-Log "Downloading file from: $DownloadURL" -Level "INFO"
     Invoke-WebRequest -Uri $DownloadURL -OutFile $DownloadFileName
-    Write-Log "Download completed: $DownloadFileName"
+    Write-Log "Download completed: $DownloadFileName" -Level "INFO"
 } catch {
     Write-Log "Failed to download the ZIP file from $DownloadURL. Error: $_" -Level "ERROR"
     return
@@ -82,7 +97,7 @@ try {
 # Extract the ZIP file to the temporary extraction folder
 try {
     Expand-Archive -Path $DownloadFileName -DestinationPath $TempExtractPath -Force
-    Write-Log "Extraction completed to $TempExtractPath"
+    Write-Log "Extraction completed to $TempExtractPath" -Level "INFO"
 } catch {
     Write-Log "Failed to extract the ZIP file. Error: $_" -Level "ERROR"
     return
@@ -93,7 +108,7 @@ try {
     $ExtractedFolder = Get-ChildItem -Path $TempExtractPath | Select-Object -First 1
     if ($ExtractedFolder) {
         Get-ChildItem -Path $ExtractedFolder.FullName -Force | Move-Item -Destination $DownloadPath -Force
-        Write-Log "Moved contents to $DownloadPath"
+        Write-Log "Moved contents to $DownloadPath" -Level "INFO"
     } else {
         Write-Log "No extracted folder found in $TempExtractPath" -Level "ERROR"
     }
@@ -105,7 +120,7 @@ try {
 # Clean up the temporary extraction folder
 try {
     Remove-Item -Path $TempExtractPath -Recurse -Force
-    Write-Log "Cleaned up temporary extraction directory: $TempExtractPath"
+    Write-Log "Cleaned up temporary extraction directory: $TempExtractPath" -Level "INFO"
 } catch {
     Write-Log "Failed to clean up temporary extraction directory: $TempExtractPath. Error: $_" -Level "ERROR"
 }
@@ -113,7 +128,7 @@ try {
 # Clean up the downloaded ZIP file
 try {
     Remove-Item -Path $DownloadFileName -Force
-    Write-Log "Cleaned up ZIP file: $DownloadFileName"
+    Write-Log "Cleaned up ZIP file: $DownloadFileName" -Level "INFO"
 } catch {
     Write-Log "Failed to clean up ZIP file: $DownloadFileName. Error: $_" -Level "ERROR"
 }
@@ -121,7 +136,7 @@ try {
 # Change directory to $DownloadPath for any further operations
 try {
     Set-Location -Path $DownloadPath
-    Write-Log "Changed directory to $DownloadPath"
+    Write-Log "Changed directory to $DownloadPath" -Level "INFO"
 } catch {
     Write-Log "Failed to change directory to $DownloadPath. Error: $_" -Level "ERROR"
 }
@@ -141,7 +156,7 @@ function Install-PrinterDrivers {
     # Install the driver
     try {
         PNPUtil.exe /add-driver $inf /install
-        Write-Log "Printer driver installed from $inf"
+        Write-Log "Printer driver installed from $inf" -Level "INFO"
     } catch {
         Write-Log "Printer driver is already loaded into the system drivers" -Level "WARN"
     }
@@ -156,7 +171,7 @@ function Install-PrinterDrivers {
     # Add driver to the list of available printers
     try {
         Add-PrinterDriver -Name $DriverName -Verbose -ErrorAction SilentlyContinue
-        Write-Log "Printer driver $DriverName added successfully."
+        Write-Log "Printer driver $DriverName added successfully." -Level "INFO"
     } catch {
         Write-Log "Printer driver $DriverName is already available on this system." -Level "WARN"
     }
@@ -164,7 +179,7 @@ function Install-PrinterDrivers {
     # Add printer port
     try {
         Add-PrinterPort -Name $PortName -PrinterHostAddress $PrinterIP -ErrorAction SilentlyContinue
-        Write-Log "Printer port $PortName created."
+        Write-Log "Printer port $PortName created." -Level "INFO"
     } catch {
         Write-Log "Printer port $PortName is already installed." -Level "WARN"
     }
@@ -172,7 +187,7 @@ function Install-PrinterDrivers {
     # Add the printer
     try {
         Add-Printer -DriverName $DriverName -Name $PrinterName -PortName $PortName -Verbose -ErrorAction SilentlyContinue
-        Write-Log "Printer $PrinterName added successfully."
+        Write-Log "Printer $PrinterName added successfully." -Level "INFO"
     } catch {
         Write-Log "Printer $PrinterName is already installed." -Level "WARN"
     }
@@ -183,7 +198,7 @@ function Set-PrinterDefaults {
     try {
         $CimInstance = Get-CimInstance -Class Win32_Printer -Filter "Name='$PrinterName'"
         Invoke-CimMethod -InputObject $CimInstance -MethodName SetDefaultPrinter
-        Write-Log "Printer $PrinterName set as default."
+        Write-Log "Printer $PrinterName set as default." -Level "INFO"
     } catch {
         Write-Log "Could not set $PrinterName as default: $($_.Exception.Message)" -Level "WARN"
     }
@@ -191,7 +206,7 @@ function Set-PrinterDefaults {
     # Set paper size to A4
     try {
         Set-PrintConfiguration -PrinterName $PrinterName -PaperSize A4
-        Write-Log "Paper size set to A4 for $PrinterName."
+        Write-Log "Paper size set to A4 for $PrinterName." -Level "INFO"
     } catch {
         Write-Log "Could not set paper size for ${PrinterName}: $($_.Exception.Message)" -Level "WARN"
     }
@@ -199,21 +214,23 @@ function Set-PrinterDefaults {
     # Set default color setting (black and white)
     try {
         Set-PrintConfiguration -PrinterName $PrinterName -Color 0
-        Write-Log "Color setting set to black and white for $PrinterName."
+        Write-Log "Color setting set to black and white for $PrinterName." -Level "INFO"
     } catch {
         Write-Log "Could not set color setting for ${PrinterName}: $($_.Exception.Message)" -Level "WARN"
     }
 }
 
-# FUNCTIONS RUN HERE
-Install-PrinterDrivers
-Set-PrinterDefaults
-
-# Confirm successful installation
-if (Get-Printer -Name $PrinterName -ErrorAction SilentlyContinue) {
-    Write-Log "Printer $PrinterName has installed successfully."
-} else {
+# ================================
+# Main Script Logic
+# ================================
+try {
+    Install-PrinterDrivers
+    Set-PrinterDefaults
+    Write-Log "Printer $PrinterName has installed successfully." -Level "INFO"
+} catch {
     Write-Log "Failed to install printer $PrinterName." -Level "ERROR"
+    Write-Log "Error occurred during printer installation: $($_.Exception.Message)" -Level "ERROR"
 }
 
+# Cleanup Temporary Files
 Remove-Item -Path "$DownloadPath" -Recurse -Force -ErrorAction SilentlyContinue
