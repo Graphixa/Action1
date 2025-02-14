@@ -101,7 +101,7 @@ function Install-WingetPackage {
     )
     
     Write-Log "Installing $Id$(if($Version){" version $Version"})"
-    
+        
     try {
         $winget = Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq 'Microsoft.DesktopAppInstaller' }
         $wingetExe = Join-Path $winget.InstallLocation 'winget.exe'
@@ -171,19 +171,19 @@ try {
     
     switch ($exitCode) {
         0 { 
-            Write-Log "Installation completed successfully"
+            Write-Log "Installation of $AppID completed successfully"
             exit 0
         }
         -1978335189 {
-            Write-Log "Package is already installed"
+            Write-Log "$AppID is already installed"
             exit 0
         }
         -1978335212 {
-            Write-Log "Package not found" -Level "ERROR"
+            Write-Log "$AppID is not found as a available package" -Level "ERROR"
             exit 1
         }
         default {
-            Write-Log "Installation failed (Exit code: $exitCode)" -Level "ERROR"
+            Write-Log "$AppID installation failed (Exit code: $exitCode)" -Level "ERROR"
             exit 1
         }
     }
