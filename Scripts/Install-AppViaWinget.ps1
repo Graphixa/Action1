@@ -19,8 +19,8 @@ $Version = ${Version}
 function Write-Log {
     param (
         [string]$Message,
-        [string]$LogFilePath = "$env:SystemDrive\Logs\Action1.log",
-        [string]$Level = "INFO"
+        [string]$LogFilePath = "$env:SystemDrive\LST\Action1.log", # Default log file path
+        [string]$Level = "INFO"  # Log level: INFO, WARN, ERROR
     )
     
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -43,7 +43,7 @@ function Write-Log {
         if ($logSize -ge 5242880) {
             Remove-Item -Path $LogFilePath -Force -ErrorAction Stop | Out-Null
             Out-File -FilePath $LogFilePath -Encoding utf8 -ErrorAction Stop
-            Add-Content -Path $LogFilePath -Value "[$timestamp] [INFO] Log file exceeded 5 MB limit and was reset."
+            Add-Content -Path $LogFilePath -Value "[$timestamp] [INFO] The log file exceeded the 5 MB limit and was deleted and recreated."
         }
     }
     

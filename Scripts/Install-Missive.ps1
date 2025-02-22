@@ -12,11 +12,17 @@
 
 $ProgressPreference = 'SilentlyContinue'
 
+$softwareName = 'Missive'
+$checkLocation = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall'
+$installerUrl = 'https://mail.missiveapp.com/download/win'
+$tempPath = "$env:SystemDrive\Temp"
+$missiveFile = "$tempPath\MissiveSetup.exe"
+
 # Logging Function
 function Write-Log {
     param (
         [string]$Message,
-        [string]$LogFilePath = "$env:SystemDrive\Logs\Action1.log", # Default log file path
+        [string]$LogFilePath = "$env:SystemDrive\LST\Action1.log", # Default log file path
         [string]$Level = "INFO"  # Log level: INFO, WARN, ERROR
     )
     
@@ -51,100 +57,80 @@ function Write-Log {
     Write-Output "$Message"
 }
 
-$softwareName = 'Missive'
-$checkLocation = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall'
-$tempPath = "$env:SystemDrive\Temp\"
-$jsonFile = $tempPath + "latest.json"
+# Function to remove Missive installer and temp files
+function Remove-TempFiles {
+    try {
+        Write-Host "Cleaning up temporary files and folders..."
+        if (Test-Path $missiveFile) { Remove-Item $missiveFile -Force }
+        if (Test-Path $tempPath) { Remove-Item $tempPath -Force }
+        Start-Sleep -Seconds 2
+    } catch {
+        Write-Host -BackgroundColor Red -ForegroundColor White " Error: Failed to remove temporary files "
+        Write-Host $_.Exception.Message
+        Start-Sleep -Seconds 3
+    }
+}
 
 # Check if Missive is already installed
-if (Get-ChildItem $checkLocation -Recurse -ErrorAction Stop | Get-ItemProperty -name DisplayName -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -Match "^$softwareName.*" }) {
-    Write-Log "$softwareName is already installed. No action required." -Level "INFO"
-    return
+if (Get-ChildItem $checkLocation -Recurse -ErrorAction Stop | 
+    Get-ItemProperty -name DisplayName -ErrorAction SilentlyContinue | 
+    Where-Object {$_.DisplayName -Match "^$softwareName.*"}) {
+    Write-Host -ForegroundColor Yellow "$softwareName is already installed. No action required."
+    Return 0
 }
 
-Write-Log "$softwareName is NOT installed. Installing Now..." -Level "INFO"
+Write-Host -ForegroundColor Yellow "$softwareName is NOT installed. Installing Now..."
 
-# URL for the latest Missive version JSON file (Hosted by Missiveapp.com)
-$jsonUrl = 'https://missiveapp.com/download/latest.json'
+# Create Temp Folder
+[void](New-Item -ItemType Directory -Force -Path $tempPath)
 
-# Create Temp Folder in the Root of the System Drive
+# Download Missive installer
 try {
-    New-Item -ItemType Directory -Force -Path $tempPath
-    Write-Log "Created temporary directory: $tempPath" -Level "INFO"
+    Write-Host "Downloading Missive installer..."
+    Invoke-WebRequest -Uri $installerUrl -OutFile $missiveFile -ErrorAction Stop
 } catch {
-    Write-Log "Failed to create temp directory: $tempPath" -Level "ERROR"
-    return
-}
-
-# Download JSON file to Temp Folder Location
-try {
-    Invoke-RestMethod -Method Get -Uri $jsonUrl -OutFile $jsonFile
-    Write-Log "Downloaded JSON file for Missive version info." -Level "INFO"
-} catch {
-    Write-Log "Failed to download JSON file for Missive." -Level "ERROR"
-    Write-Log $_.Exception.Message -Level "ERROR"
-    return
-}
-
-# Search JSON file and return the URL of the latest Missive release for Windows
-$json = (Get-Content $jsonFile -Raw) | ConvertFrom-Json
-$version = $json.version
-$windowsDL = $json.downloads.windows.direct
-$missiveFile = "$tempPath\$softwareName-$version.exe"
-
-# Download latest Missive version for Windows
-try {
-    Write-Log "Downloading Missive Installer from $windowsDL" -Level "INFO"
-    Invoke-WebRequest -Method Get -Uri $windowsDL -OutFile $missiveFile
-    Write-Log "Download completed: $missiveFile" -Level "INFO"
-} catch {
-    Write-Log "Failed to download Missive installer." -Level "ERROR"
-    Write-Log $_.Exception.Message -Level "ERROR"
-    return
+    Write-Host -BackgroundColor Red -ForegroundColor White " Error: Download failed "
+    Write-Host $_.Exception.Message
+    Remove-TempFiles
+    Return 1
 }
 
 # Install Missive silently for all users
 try {
-    Write-Log "Installing Missive for all users." -Level "INFO"
-    Start-Process -Wait -FilePath $missiveFile -ArgumentList "/S /D=$env:SystemDrive\$softwareName" -PassThru
-    Write-Log "Missive installation completed." -Level "INFO"
+    Write-Host "Installing Missive for all users..."
+    $process = Start-Process -Wait -FilePath $missiveFile -ArgumentList "/S /D=$InstallPath" -PassThru
+    if ($process.ExitCode -ne 0) {
+        throw "Installation failed with exit code: $($process.ExitCode)"
+    }
 } catch {
-    Write-Log "Missive installation failed." -Level "ERROR"
-    Write-Log $_.Exception.Message -Level "ERROR"
-    return
+    Write-Host -BackgroundColor Red -ForegroundColor White " Error: Installation failed "
+    Write-Host $_.Exception.Message
+    Remove-TempFiles
+    Return 1
 }
 
-# Create Shortcuts for all users
-$missiveExecutable = "$env:SystemDrive\$softwareName\Missive.exe"
-$startMenuPath = "$env:ALLUSERSPROFILE\Microsoft\Windows\Start Menu\Programs\Missive.lnk"
-$desktopPath = "$env:Public\Desktop\Missive.lnk"
-$WScriptObj = New-Object -ComObject ("WScript.Shell")
-
+# Create shortcuts for all users
 try {
-    Write-Log "Creating desktop and start menu shortcuts for all users." -Level "INFO"
-    
-    # Create Shortcut in All-Users Start Menu
+    Write-Host "Creating shortcuts for all users..."
+    $missiveExecutable = "$env:SystemDrive\$softwareName\Missive.exe"
+    $WScriptObj = New-Object -ComObject ("WScript.Shell")
+
+    # Create Start Menu shortcut
+    $startMenuPath = "$env:ALLUSERSPROFILE\Microsoft\Windows\Start Menu\Programs\Missive.lnk"
     $shortcutStart = $WscriptObj.CreateShortcut($startMenuPath)
     $shortcutStart.TargetPath = $missiveExecutable
     $shortcutStart.Save()
 
-    # Create Shortcut on All-Users Desktop
+    # Create Desktop shortcut
+    $desktopPath = "$env:Public\Desktop\Missive.lnk"
     $shortcutDesktop = $WscriptObj.CreateShortcut($desktopPath)
     $shortcutDesktop.TargetPath = $missiveExecutable
     $shortcutDesktop.Save()
-
-    Write-Log "Shortcuts created successfully." -Level "INFO"
 } catch {
-    Write-Log "Failed to create desktop and start menu shortcuts." -Level "ERROR"
-    Write-Log $_.Exception.Message -Level "ERROR"
+    Write-Host -BackgroundColor Red -ForegroundColor White " Error: Failed to create shortcuts "
+    Write-Host $_.Exception.Message
 }
 
-# Cleanup temporary files at the end
-try {
-    Write-Log "Cleaning up temporary files and folders." -Level "INFO"
-    Remove-Item -Path $tempPath -Recurse -Force
-    Write-Log "Temporary files and folders cleaned up successfully." -Level "INFO"
-} catch {
-    Write-Log "Failed to remove temporary files and folders." -Level "ERROR"
-    Write-Log $_.Exception.Message -Level "ERROR"
-}
+# Cleanup
+Remove-TempFiles
+Write-Host -ForegroundColor Green "Missive installation completed successfully!"

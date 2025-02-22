@@ -19,7 +19,7 @@ $defaultAppAssocPath = ${XML File Path} # Replace this with your XML file's dire
 function Write-Log {
     param (
         [string]$Message,
-        [string]$LogFilePath = "$env:SystemDrive\Logs\Action1.log", # Default log file path
+        [string]$LogFilePath = "$env:SystemDrive\LST\Action1.log", # Default log file path
         [string]$Level = "INFO"  # Log level: INFO, WARN, ERROR
     )
     

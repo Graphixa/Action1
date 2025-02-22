@@ -15,12 +15,12 @@ $ProgressPreference = 'SilentlyContinue'
 
 $wallpaperUrlOrPath = ${Wallpaper Path}
 $lockScreenUrlOrPath = ${LockScreenPath}  
-$downloadLocation = "$env:SystemDrive\Action1" # Path to download and keep wallpaper/lockscreen files *if required*
+$downloadLocation = "$env:SystemDrive\LST\Action1" # Path to download and keep wallpaper/lockscreen files *if required*
 
 function Write-Log {
     param (
         [string]$Message,
-        [string]$LogFilePath = "$env:SystemDrive\Logs\Action1.log", # Default log file path
+        [string]$LogFilePath = "$env:SystemDrive\LST\Action1.log", # Default log file path
         [string]$Level = "INFO"  # Log level: INFO, WARN, ERROR
     )
     
