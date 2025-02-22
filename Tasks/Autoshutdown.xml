@@ -4,17 +4,12 @@
     <Date>2024-09-11T23:27:23.9831162</Date>
     <Author>Action1</Author>
     <Description>Shutdown script to run at close of business (7pm) each day.</Description>
-    <URI>\Action1-AutoShutdown</URI>
+    <URI>\AutoShutdown</URI>
   </RegistrationInfo>
   <Triggers>
     <CalendarTrigger>
-      <Repetition>
-        <Interval>PT1H</Interval>
-        <Duration>PT4H</Duration>
-        <StopAtDurationEnd>false</StopAtDurationEnd>
-      </Repetition>
       <StartBoundary>2024-01-01T18:00:00</StartBoundary>
-      <ExecutionTimeLimit>PT4H</ExecutionTimeLimit>
+      <ExecutionTimeLimit>PT1H</ExecutionTimeLimit>
       <Enabled>true</Enabled>
       <ScheduleByDay>
         <DaysInterval>1</DaysInterval>
@@ -32,7 +27,7 @@
     <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
     <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
     <AllowHardTerminate>true</AllowHardTerminate>
-    <StartWhenAvailable>true</StartWhenAvailable>
+    <StartWhenAvailable>false</StartWhenAvailable>
     <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
     <IdleSettings>
       <Duration>PT10M</Duration>
@@ -47,7 +42,7 @@
     <DisallowStartOnRemoteAppSession>false</DisallowStartOnRemoteAppSession>
     <UseUnifiedSchedulingEngine>true</UseUnifiedSchedulingEngine>
     <WakeToRun>false</WakeToRun>
-    <ExecutionTimeLimit>PT8H</ExecutionTimeLimit>
+    <ExecutionTimeLimit>PT1H</ExecutionTimeLimit>
     <Priority>7</Priority>
     <RestartOnFailure>
       <Interval>PT10M</Interval>
