@@ -1,5 +1,5 @@
 # ================================================
-# PowerShell Script Template for Action1
+# Install Chocolatey Package Manager script for Action1
 # ================================================
 # Description:
 #   - This script installs Chocolatey Package Manager.

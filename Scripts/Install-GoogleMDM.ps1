@@ -1,8 +1,11 @@
 # ================================================
-# Deploy Google Workspace MDM for Action1
+# Install Google Workspace MDM for Action1
 # ================================================
 # Description:
-#   - This script deploys Google Chrome Enterprise, GCPW (Google Credential Provider for Windows), and Google Drive File Stream, with required configurations.
+#   - This script deploys:
+#     - Google Chrome Remote Desktop Host
+#     - GCPW (Google Credential Provider for Windows)
+#     - Google Drive File Stream
 #
 # Requirements:
 #   - Admin rights are required.
@@ -11,7 +14,6 @@
 
 
 $ProgressPreference = 'SilentlyContinue'
-Set-StrictMode -Version Latest
 
 $googleEnrollmentToken = ${Enrollment Token}
 $domainsAllowedToLogin = ${Domains Allowed To Login}
@@ -71,34 +73,6 @@ function Test-ProgramInstalled {
     return $InstalledSoftware | Where-Object { $_.DisplayName -like "*$ProgramName*" }
 }
 
-function Install-ChromeEnterprise {
-    $chromeFileName = if ([Environment]::Is64BitOperatingSystem) {
-        'googlechromestandaloneenterprise64.msi'
-    } else {
-        'googlechromestandaloneenterprise.msi'
-    }
-    $chromeUrl = "https://dl.google.com/chrome/install/$chromeFileName"
-    
-    if (Test-ProgramInstalled 'Google Chrome') {
-        Write-Log "Google Chrome Enterprise is already installed. Skipping installation." -Level "INFO"
-    } else {
-        Write-Log "Downloading Google Chrome Enterprise..." -Level "INFO"
-        Invoke-WebRequest -Uri $chromeUrl -OutFile "$env:TEMP\$chromeFileName" | Out-Null
-
-        try {
-            $arguments = "/i `"$env:TEMP\$chromeFileName`" /qn"
-            $installProcess = Start-Process msiexec.exe -ArgumentList $arguments -PassThru -Wait
-
-            if ($installProcess.ExitCode -eq 0) {
-                Write-Log "Google Chrome Enterprise installed successfully." -Level "INFO"
-            } else {
-                Write-Log "Failed to install Google Chrome Enterprise. Exit code: $($installProcess.ExitCode)" -Level "ERROR"
-            }
-        } finally {
-            Remove-Item -Path "$env:TEMP\$chromeFileName" -Force -ErrorAction SilentlyContinue
-        }
-    }
-}
 
 function Install-GCPW {
     $gcpwFileName = if ([Environment]::Is64BitOperatingSystem) {
@@ -175,13 +149,41 @@ function Install-GoogleDrive {
     }
 }
 
+function Install-ChromeRemoteDesktop {
+    $remoteDesktopFileName = "ChromeRemoteDesktopHost.msi"
+    $remoteDesktopUrl = "https://dl.google.com/dl/edgedl/chrome-remote-desktop/chromeremotedesktophost.msi"
+
+    if (Test-ProgramInstalled 'Chrome Remote Desktop Host') {
+        Write-Log "Chrome Remote Desktop Host is already installed. Skipping..." -Level "INFO"
+    }
+    else {
+        Write-Log "Downloading Chrome Remote Desktop Host from $remoteDesktopUrl" -Level "INFO"
+        Invoke-WebRequest -Uri $remoteDesktopUrl -OutFile "$env:TEMP\$remoteDesktopFileName" | Out-Null
+
+        try {
+            $arguments = "/i `"$env:TEMP\$remoteDesktopFileName`" /quiet"
+            $installProcess = Start-Process msiexec.exe -ArgumentList $arguments -PassThru -Wait
+
+            if ($installProcess.ExitCode -eq 0) {
+                Write-Log "Chrome Remote Desktop Host installed successfully." -Level "INFO"
+            }
+            else {
+                Write-Log "Failed to install Chrome Remote Desktop Host. Exit code: $($installProcess.ExitCode)" -Level "ERROR"
+            }
+        }
+        finally {
+            Remove-Item -Path "$env:TEMP\$remoteDesktopFileName" -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 try {
     Write-Log "Deploying Google Workspace MDM..." -Level "INFO"
     
     # Run installation functions
-    Install-ChromeEnterprise
     Install-GCPW
     Install-GoogleDrive
+    Install-ChromeRemoteDesktop
 
     Write-Log "GoogleMDM deployment completed." -Level "INFO"
 } catch {

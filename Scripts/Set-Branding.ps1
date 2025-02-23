@@ -14,8 +14,8 @@
 $ProgressPreference = 'SilentlyContinue'
 
 $wallpaperUrlOrPath = ${Wallpaper Path}
-$lockScreenUrlOrPath = ${LockScreenPath}  
-$downloadLocation = "$env:SystemDrive\LST\Action1" # Path to download and keep wallpaper/lockscreen files *if required*
+$lockScreenUrlOrPath = ${Lockscreen Path}  
+$downloadLocation = "$env:SystemDrive\LST\Branding" # Path to download and keep wallpaper/lockscreen files *only used if downloading wallpaper and lock screen from remote URL*
 
 function Write-Log {
     param (
@@ -51,8 +51,8 @@ function Write-Log {
     # Write log entry to the log file
     Add-Content -Path $LogFilePath -Value $logMessage
 
-    # Write output to Action1 host
-    Write-Output "$Message"
+    # Write output to Action1 host using Write-Host instead of Write-Output
+    Write-Host $Message
 }
 
 function Set-RegistryModification {
@@ -72,7 +72,7 @@ function Set-RegistryModification {
         [string]$type = "String",  # Default to String
 
         [Parameter()]
-        [object]$value  # Changed to object to handle various data types
+        [object]$value
     )
 
     try {
@@ -113,6 +113,7 @@ function Set-RegistryModification {
             $fullKeyPath = Join-Path $fullKeyPath $part
             if (-not (Test-Path $fullKeyPath)) {
                 New-Item -Path $fullKeyPath -Force -ErrorAction Stop | Out-Null
+                Write-Log "Created registry key: $fullKeyPath" -Level "INFO"
             }
         }
 
@@ -149,7 +150,7 @@ function Set-RegistryModification {
 
                 if (-not ($currentValue -eq $value)) {
                     Write-Log "Registry value differs. Updating item: $name from $currentValue to $value" -Level "INFO"
-                    Set-ItemProperty -Path $fullKeyPath -Name $name -Value $value -Force -ErrorAction Stop
+                    Set-ItemProperty -Path $fullKeyPath -Name $name -Value $value -Type $type -Force -ErrorAction Stop
                 } else {
                     Write-Log "Registry item: $name with value: $value already exists. Skipping." -Level "WARN"
                 }
@@ -158,13 +159,15 @@ function Set-RegistryModification {
             # Check if the registry value exists
             if (Get-ItemProperty -Path $fullKeyPath -Name $name -ErrorAction SilentlyContinue) {
                 Write-Log "Removing registry item: $name from path: $fullKeyPath" -Level "INFO"
-                Remove-ItemProperty -Path $fullKeyPath -Name $name -Force -ErrorAction Stop
+                Remove-ItemProperty -Path $fullKeyPath -Name $name -Force -ErrorAction Stop | Out-Null
             } else {
                 Write-Log "Registry item: $name does not exist at path: $fullKeyPath. Skipping." -Level "WARN"
             }
         }
-    } catch {
+    } 
+    catch {
         Write-Log "Error modifying the registry: $($_.Exception.Message)" -Level "ERROR"
+        throw
     }
 }
 
@@ -175,24 +178,28 @@ function Get-Image {
         [string]$fileName     # File name for saving the image locally
     )
 
-    $localImagePath = if ($imagePath -match "^https?://") { # Only create download location for URLs
-        if (-not (Test-Path $downloadLocation)) {
-            New-Item -Path $downloadLocation -ItemType Directory -Force | Out-Null
-        }
-        Join-Path $downloadLocation $fileName
-    } else {
-        $imagePath
-    }
-
     try {
+        # Determine the local path first
         if ($imagePath -match "^https?://") {
+            # Only create download location for URLs
+            if (-not (Test-Path $downloadLocation)) {
+                New-Item -Path $downloadLocation -ItemType Directory -Force | Out-Null
+            }
+            $localImagePath = Join-Path $downloadLocation $fileName
+
             Write-Log "Downloading image from URL: $imagePath" -Level "INFO"
-            Invoke-WebRequest -Uri $imagePath -OutFile $localImagePath -ErrorAction Stop
-        } elseif (-not (Test-Path $imagePath)) {
-            throw "The image file does not exist or is inaccessible: $imagePath"
+            # Redirect output to null to prevent capture
+            $null = Invoke-WebRequest -Uri $imagePath -OutFile $localImagePath -ErrorAction Stop
+            Write-Log "Image downloaded to: $localImagePath" -Level "INFO"
+        } else {
+            if (-not (Test-Path $imagePath)) {
+                throw "The image file does not exist or is inaccessible: $imagePath"
+            }
+            $localImagePath = $imagePath
         }
 
-        return $localImagePath
+        # Return the path without any output capture
+        Write-Output $localImagePath
     } catch {
         Write-Log "Failed to download or copy image: $($_.Exception.Message)" -Level "ERROR"
         throw
@@ -208,10 +215,17 @@ try {
     # Set Wallpaper
     if ($wallpaperUrlOrPath) {
         try {
+            # Get the image first
             $localWallpaperPath = Get-Image -imagePath $wallpaperUrlOrPath -fileName "wallpaper.jpg"
-            Write-Log "Setting wallpaper to: $localWallpaperPath"
 
+            # Clean up existing registry entries first
             $registryPath = "HKLM:\Software\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
+            Set-RegistryModification -action remove -path $registryPath -name "DesktopImagePath"
+            Set-RegistryModification -action remove -path $registryPath -name "DesktopImageUrl"
+            Set-RegistryModification -action remove -path $registryPath -name "DesktopImageStatus"
+
+            # Now set new values
+            Write-Log "Setting wallpaper registry values for path: $localWallpaperPath" -Level "INFO"
             Set-RegistryModification -action add -path $registryPath -name "DesktopImagePath" -type "String" -value $localWallpaperPath
             Set-RegistryModification -action add -path $registryPath -name "DesktopImageUrl" -type "String" -value $localWallpaperPath
             Set-RegistryModification -action add -path $registryPath -name "DesktopImageStatus" -type "DWord" -value 1
@@ -226,10 +240,17 @@ try {
     # Set Lock Screen
     if ($lockScreenUrlOrPath) {
         try {
+            # Get the image first
             $localLockScreenPath = Get-Image -imagePath $lockScreenUrlOrPath -fileName "lockscreen.jpg"
-            Write-Log "Setting lock screen image to: $localLockScreenPath"
 
+            # Clean up existing registry entries first
             $registryPath = "HKLM:\Software\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
+            Set-RegistryModification -action remove -path $registryPath -name "LockScreenImagePath"
+            Set-RegistryModification -action remove -path $registryPath -name "LockScreenImageUrl"
+            Set-RegistryModification -action remove -path $registryPath -name "LockScreenImageStatus"
+
+            # Now set new values
+            Write-Log "Setting lock screen registry values for path: $localLockScreenPath" -Level "INFO"
             Set-RegistryModification -action add -path $registryPath -name "LockScreenImagePath" -type "String" -value $localLockScreenPath
             Set-RegistryModification -action add -path $registryPath -name "LockScreenImageUrl" -type "String" -value $localLockScreenPath
             Set-RegistryModification -action add -path $registryPath -name "LockScreenImageStatus" -type "DWord" -value 1

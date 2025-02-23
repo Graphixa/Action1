@@ -3,7 +3,10 @@
 # ================================================
 # Description:
 #   - This script sets the computer name based on the device's serial number.
-#   - The script detects the system type (workstation, notebook, virtual machine) and assigns a name accordingly.
+#   - The script detects the system type (workstation, notebook, virtual machine) and assigns a name accordingly
+#      - Workstation = WS-<Serial Number>
+#      - Notebook = NB-<Serial Number>
+#      - Virtual Machine = VM-<Serial Number>
 #   - Serial numbers are sanitized by removing spaces and truncating them to 15 characters.
 #   - The company prefix is optional; if not provided, it defaults to no prefix.
 #
@@ -11,12 +14,6 @@
 #   - Admin rights are required to rename the computer.
 #   - The serial number should be accessible through the Win32_BIOS class.
 #
-# Example usage:
-#   # Run the script with a company prefix:
-#   & "C:\Scripts\Set-ComputerName.ps1" -CompanyPrefix "MSFT"
-#
-#   # Run the script without a company prefix (default to no prefix):
-#   & "C:\Scripts\Set-ComputerName.ps1"
 # ================================================
 
 $CompanyPrefix = ${Computer Name Prefix}

@@ -1,5 +1,5 @@
 # ================================================
-# Install Google Fonts  Script for Action1
+# Install Google Fonts Script for Action1
 # ================================================
 # Description:
 #   - This script installs a list of Google Fonts from the Google Fonts GitHub repository.
@@ -10,7 +10,6 @@
 # ================================================
 
 $ProgressPreference = 'SilentlyContinue'
-
 
 $fonts = ${Font List} # Define the list of fonts to install seperated by a comma ( , )
 # Example: "notosans, opensans, firasans, merriweather"
@@ -109,7 +108,7 @@ function Get-Fonts {
 }
 
 # Function to register font in the system registry
-function RegistryTouch {
+function Set-RegistryModification {
     param (
         [string]$action,
         [string]$path,
@@ -156,8 +155,8 @@ try {
             $fontDestination = Join-Path -Path $env:windir\Fonts -ChildPath $font.Name
             Copy-Item -Path $font.FullName -Destination $fontDestination -Force
 
-            # Use RegistryTouch to register the font in the registry
-            RegistryTouch -action add `
+            # Use Set-RegistryModification to register the font in the registry
+            Set-RegistryModification -action add `
                 -path "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Fonts" `
                 -name $font.BaseName `
                 -value $font.Name `
