@@ -52,7 +52,7 @@ function Write-Log {
     Add-Content -Path $LogFilePath -Value $logMessage
 
     # Write output to Action1 host
-    Write-Output "$Message"
+    Write-Host "$Message"
 }
 
 # Function to check if a font is installed
