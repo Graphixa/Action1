@@ -1,10 +1,12 @@
 # VMware Tools Installation Script
 # This script downloads and installs the latest VMware Tools for Windows
+# ================================================
+
+$ProgressPreference = 'SilentlyContinue'
 
 $VMWareToolsURL = "https://packages.vmware.com/tools/esx/latest/windows/x64/"
-
-# Use system temp directory instead of creating a permanent directory
 $VMWareToolsPath = $env:TEMP
+
 
 # Function to get the latest VMware Tools installer filename
 function Get-LatestVMwareToolsInstaller {
