@@ -13,7 +13,7 @@ $ProgressPreference = 'SilentlyContinue'
 
 $RuleName = "Block Microsoft Edge"
 $ProgramPath = "$env:ProgramFiles (x86)\Microsoft\Edge\Application\msedge.exe"
-$firewallRuleAction = ${Action}
+$firewallRuleAction = ${Action} # "Allow" or "Block"
 
 $LogFilePath = "$env:SystemDrive\LST\Action1.log" # Default log file path
 
