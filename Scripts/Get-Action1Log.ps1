@@ -18,6 +18,7 @@ $LogFilePath = "$env:SystemDrive\LST\Action1.log"
 function Write-Log {
     param (
         [string]$Message,
+        [string]$LogFilePath = $LogFilePath, # Default log file path    
         [string]$Level = "INFO"  # Log level: INFO, WARN, ERROR
     )
     

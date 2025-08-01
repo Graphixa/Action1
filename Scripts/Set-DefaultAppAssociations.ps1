@@ -15,11 +15,12 @@ $ProgressPreference = 'SilentlyContinue'
 # Define the URL or local path for the default app associations XML file
 $defaultAppAssocPath = ${XML File Path} # Replace this with your XML file's direct link.
 
+$LogFilePath = "$env:SystemDrive\LST\Action1.log" # Default log file path   
 
 function Write-Log {
     param (
         [string]$Message,
-        [string]$LogFilePath = "$env:SystemDrive\LST\Action1.log", # Default log file path
+        [string]$LogFilePath = $LogFilePath, # Default log file path
         [string]$Level = "INFO"  # Log level: INFO, WARN, ERROR
     )
     

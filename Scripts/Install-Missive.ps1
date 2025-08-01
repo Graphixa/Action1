@@ -17,13 +17,14 @@ $softwareName = 'Missive'
 $checkLocation = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall'
 $downloadUrl = 'https://mail.missiveapp.com/download/win'
 $InstallPath = "$env:SystemDrive\Missive"
-$tempPath = "$env:SystemDrive\Temp"  # Changed to match reference script
+$tempPath = "$env:temp"  # Changed to match reference script
 $missiveFile = "$tempPath\MissiveSetup.exe"
+$LogFilePath = "$env:SystemDrive\LST\Action1.log" # Default log file path
 
 function Write-Log {
     param (
         [string]$Message,
-        [string]$LogFilePath = "$env:SystemDrive\LST\Action1.log", # Default log file path
+        [string]$LogFilePath = $LogFilePath, # Default log file path
         [string]$Level = "INFO"  # Log level: INFO, WARN, ERROR
     )
     

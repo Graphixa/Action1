@@ -11,13 +11,25 @@
 
 $ProgressPreference = 'SilentlyContinue'
 
+# ====================
+# Parameters Section
+# ====================
+# Define any custom parameters here.
+
+$softwareName = 'SoftwareName'  # Placeholder for software name
+$installPath = "$env:SystemDrive\Program Files\$softwareName"
+
+# for all temp paths use $env:temp
+
+$LogFilePath = "$env:SystemDrive\LST\Action1.log" # Default log file path
+
 # ================================
 # Logging Function: Write-Log
 # ================================
 function Write-Log {
     param (
         [string]$Message,
-        [string]$LogFilePath = "$env:SystemDrive\LST\Action1.log", # Default log file path
+        [string]$LogFilePath = $LogFilePath, # Default log file path
         [string]$Level = "INFO"  # Log level: INFO, WARN, ERROR
     )
     
@@ -51,15 +63,6 @@ function Write-Log {
     # Write output to Action1 host
     Write-Output "$Message"
 }
-
-# ================================
-# Parameters Section (Customizable)
-# ================================
-# Define any custom parameters here.
-
-$softwareName = 'SoftwareName'  # Placeholder for software name
-$installPath = "$env:SystemDrive\Program Files\$softwareName"
-$tempPath = "$env:SystemDrive\Temp\"
 
 # ================================
 # Pre-Check Section (Optional)

@@ -6,7 +6,45 @@ $ProgressPreference = 'SilentlyContinue'
 
 $VMWareToolsURL = "https://packages.vmware.com/tools/esx/latest/windows/x64/"
 $VMWareToolsPath = $env:TEMP
+$LogFilePath = "$env:SystemDrive\LST\Action1.log" # Default log file path   
 
+function Write-Log {
+    param (
+        [string]$Message,
+        [string]$LogFilePath = $LogFilePath, # Default log file path
+        [string]$Level = "INFO"  # Log level: INFO, WARN, ERROR
+    )
+    
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logMessage = "[$timestamp] [$Level] $Message"
+
+    # Ensure the directory for the log file exists
+    $logFileDirectory = Split-Path -Path $LogFilePath -Parent
+    if (!(Test-Path -Path $logFileDirectory)) {
+        try {
+            New-Item -Path $logFileDirectory -ItemType Directory -Force | Out-Null
+        } catch {
+            Write-Error "Failed to create log file directory: $logFileDirectory. $_"
+            return
+        }
+    }
+
+    # Check log file size and recreate if too large
+    if (Test-Path -Path $LogFilePath) {
+        $logSize = (Get-Item -Path $LogFilePath -ErrorAction Stop).Length
+        if ($logSize -ge 5242880) {
+            Remove-Item -Path $LogFilePath -Force -ErrorAction Stop | Out-Null
+            Out-File -FilePath $LogFilePath -Encoding utf8 -ErrorAction Stop
+            Add-Content -Path $LogFilePath -Value "[$timestamp] [INFO] The log file exceeded the 5 MB limit and was deleted and recreated."
+        }
+    }
+    
+    # Write log entry to the log file
+    Add-Content -Path $LogFilePath -Value $logMessage
+
+    # Write output to Action1 host
+    Write-Output "$Message"
+}
 
 # Function to get the latest VMware Tools installer filename
 function Get-LatestVMwareToolsInstaller {

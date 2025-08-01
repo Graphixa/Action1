@@ -13,6 +13,7 @@
 
 $ProgressPreference = 'SilentlyContinue'
 
+$LogFilePath = "$env:SystemDrive\LST\Action1.log" # Default log file path
 $wingetConfigPath = ${Winget Configuration Path}  # Provide URL or path for the Winget configuration file
 $downloadLatestVersions = ${Download Latest Versions}  # Boolean: 1 to download latest versions or 0 to download version info in configuration file
 
@@ -23,7 +24,7 @@ $downloadLocation = "$env:temp\winget-import"  # Path to store the Winget config
 function Write-Log {
     param (
         [string]$Message,
-        [string]$LogFilePath = "$env:SystemDrive\LST\Action1.log", # Default log file path
+        [string]$LogFilePath = $LogFilePath, # Default log file path
         [string]$Level = "INFO"  # Log level: INFO, WARN, ERROR
     )
     

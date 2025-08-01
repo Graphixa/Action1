@@ -15,12 +15,12 @@ $fonts = ${Font List} # Define the list of fonts to install seperated by a comma
 # Example: "notosans, opensans, firasans, merriweather"
 
 $tempDownloadFolder = "$env:TEMP\google_fonts"
-
+$LogFilePath = "$env:SystemDrive\LST\Action1.log" # Default log file path
 
 function Write-Log {
     param (
         [string]$Message,
-        [string]$LogFilePath = "$env:SystemDrive\LST\Action1.log", # Default log file path
+        [string]$LogFilePath = $LogFilePath, # Default log file path
         [string]$Level = "INFO"  # Log level: INFO, WARN, ERROR
     )
     

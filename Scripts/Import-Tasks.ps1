@@ -16,11 +16,11 @@ $ProgressPreference = 'SilentlyContinue'
 
 $taskFiles = $("${Import Task Path}" -split ',').Trim() # Split the provided paths/URLs into an array (assumes comma-separated URLs)
 $tempTaskFolder = "$env:TEMP\Action1Tasks"
-
+$LogFilePath = "$env:SystemDrive\LST\Action1.log" # Default log file path
 function Write-Log {
     param (
         [string]$Message,
-        [string]$LogFilePath = "$env:SystemDrive\LST\Action1.log", # Default log file path
+        [string]$LogFilePath = $LogFilePath, # Default log file path
         [string]$Level = "INFO"  # Log level: INFO, WARN, ERROR
     )
     

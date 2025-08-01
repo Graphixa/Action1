@@ -31,11 +31,12 @@ $registryKey = "${Registry Key}" # Key Value name - Example: "MDM"
 $registryType = "${Data Type}" # Data Type - Example: String, ExpandString, Binary, DWord, MultiString, QWord
 $registryValue = "${Data Value}" # Value to be set for "add" action. Ignored if "remove" is used.
 
+$LogFilePath = "$env:SystemDrive\LST\Action1.log" # Default log file path
 
 function Write-Log {
     param (
         [string]$Message,
-        [string]$LogFilePath = "$env:SystemDrive\LST\Action1.log", # Default log file path
+        [string]$LogFilePath = $LogFilePath, # Default log file path
         [string]$Level = "INFO"  # Log level: INFO, WARN, ERROR
     )
     

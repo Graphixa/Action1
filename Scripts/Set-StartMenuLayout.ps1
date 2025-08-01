@@ -16,11 +16,12 @@ $StartMenuBINFile = ${Start Menu BIN File}  # Replace with your actual path or U
 $tempBinPath = "$env:TEMP\Start2.bin"  # Temp file path for downloaded .bin file
 $destFolderPath = "$env:SystemDrive\Users\Default\AppData\Local\Packages\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\LocalState"
 
+$LogFilePath = "$env:SystemDrive\LST\Action1.log" # Default log file path
 
 function Write-Log {
     param (
         [string]$Message,
-        [string]$LogFilePath = "$env:SystemDrive\LST\Action1.log", # Default log file path
+        [string]$LogFilePath = $LogFilePath, # Default log file path
         [string]$Level = "INFO"  # Log level: INFO, WARN, ERROR
     )
     

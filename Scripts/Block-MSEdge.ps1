@@ -15,11 +15,12 @@ $RuleName = "Block Microsoft Edge"
 $ProgramPath = "$env:ProgramFiles (x86)\Microsoft\Edge\Application\msedge.exe"
 $firewallRuleAction = ${Action}
 
+$LogFilePath = "$env:SystemDrive\LST\Action1.log" # Default log file path
 
 function Write-Log {
     param (
         [string]$Message,
-        [string]$LogFilePath = "$env:SystemDrive\LST\Action1.log", # Default log file path
+        [string]$LogFilePath = $LogFilePath, # Default log file path
         [string]$Level = "INFO"  # Log level: INFO, WARN, ERROR
     )
     
