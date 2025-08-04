@@ -16,9 +16,9 @@ $ProgressPreference = 'SilentlyContinue'
 # Parameters Section
 # ====================
 
-$OfficeProductKey = {Product Key} # "XQNVK-8JYDB-WJ9W3-YJ8YR-WFG99" Generic test key for testing
-$ProductID = {Product ID} # ProPlus2019Retail, ProPlusRetail
-$OfficeChannel = {Office Channel} # PerpetualVL2019, PerpetualVL2016, SemiAnnual
+$OfficeProductKey = ${Product Key} # "XQNVK-8JYDB-WJ9W3-YJ8YR-WFG99" Generic test key for testing
+$ProductID = ${Product ID} # ProPlus2019Retail, ProPlusRetail
+$OfficeChannel = ${Office Channel} # PerpetualVL2019, PerpetualVL2016, SemiAnnual
 $softwareName = 'Microsoft Office'
 $LogFilePath = "$env:SystemDrive\LST\Action1.log"
 $odtUrl = "https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_16731-20398.exe"
