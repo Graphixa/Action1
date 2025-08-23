@@ -1,5 +1,5 @@
 # ================================================
-# Import Scheduled Tasks Script for Action1
+# Import Scheduled Tasks from URL(s) or Local Path(s) Script for Action1
 # ================================================
 # Description:
 #   - This script imports specified task files (XML) into Windows Task Scheduler.

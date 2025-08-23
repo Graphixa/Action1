@@ -53,8 +53,8 @@ function Write-Log {
     # Write log entry to the log file
     Add-Content -Path $LogFilePath -Value $logMessage
 
-    # Write output to Action1 host using Write-Host instead of Write-Output
-    Write-Host $Message
+    # Write output to Action1 host
+    Write-Output "$Message"
 }
 
 function Set-RegistryModification {

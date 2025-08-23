@@ -255,7 +255,7 @@ foreach ($n in $candidateNames) {
     try {
         $exists = Get-PrinterDriver -Name $n -ErrorAction SilentlyContinue
         if (-not $exists) {
-            Add-PrinterDriver -Name $n -Environment 'Windows x64' -ErrorAction Stop | Out-Null
+            Add-PrinterDriver -Name $n -ErrorAction Stop | Out-Null
             Write-Log "Bound driver by name: $n" -Level "INFO"
             $driverName = $n; break
         } else {

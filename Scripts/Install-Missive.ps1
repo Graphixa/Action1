@@ -14,7 +14,6 @@ $ProgressPreference = 'SilentlyContinue'
 
 # Global Variables
 $softwareName = 'Missive'
-$checkLocation = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall'
 $downloadUrl = 'https://mail.missiveapp.com/download/win'
 $InstallPath = "$env:SystemDrive\Missive"
 $tempPath = "$env:temp"  # Changed to match reference script
@@ -79,14 +78,78 @@ function Remove-TempFiles {
 
 function Test-Prerequisites {
     try {
-        # Check if already installed
-        if (Get-ChildItem $checkLocation -Recurse -ErrorAction Stop | 
+        Write-Log "Checking if $softwareName is already installed..." -Level "INFO"
+        
+        # Method 1: Check all user profiles for HKCU installations
+        $allUsersInstalled = $false
+        $userProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList" -ErrorAction SilentlyContinue
+        
+        foreach ($profile in $userProfiles) {
+            try {
+                $profilePath = Get-ItemProperty -Path $profile.PSPath -Name "ProfileImagePath" -ErrorAction SilentlyContinue
+                if ($profilePath.ProfileImagePath -and (Test-Path $profilePath.ProfileImagePath)) {
+                    $userSid = $profile.PSChildName
+                    $userHKCU = "Registry::HKEY_USERS\$userSid\Software\Microsoft\Windows\CurrentVersion\Uninstall"
+                    
+                    $userInstalled = Get-ChildItem $userHKCU -Recurse -ErrorAction SilentlyContinue | 
+                        Get-ItemProperty -name DisplayName -ErrorAction SilentlyContinue | 
+                        Where-Object { $_.DisplayName -Match "^$softwareName.*" }
+                    
+                    if ($userInstalled) {
+                        Write-Log "Found $softwareName installed for user profile: $($profilePath.ProfileImagePath)" -Level "INFO"
+                        $allUsersInstalled = $true
+                        break
+                    }
+                }
+            } catch {
+                # Continue checking other profiles if one fails
+                continue
+            }
+        }
+        
+        # Method 2: Check machine-wide installations
+        $machineUninstallPath = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall'
+        $wow64UninstallPath = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall'
+        
+        $machineInstalled = Get-ChildItem $machineUninstallPath -Recurse -ErrorAction SilentlyContinue | 
             Get-ItemProperty -name DisplayName -ErrorAction SilentlyContinue | 
-            Where-Object { $_.DisplayName -Match "^$softwareName.*" }) {
-            Write-Log "$softwareName is already installed" -Level "INFO"
+            Where-Object { $_.DisplayName -Match "^$softwareName.*" }
+            
+        $wow64Installed = Get-ChildItem $wow64UninstallPath -Recurse -ErrorAction SilentlyContinue | 
+            Get-ItemProperty -name DisplayName -ErrorAction SilentlyContinue | 
+            Where-Object { $_.DisplayName -Match "^$softwareName.*" }
+        
+        # Method 3: Check if executable exists in common installation paths
+        $commonPaths = @(
+            "$env:ProgramFiles\Missive\Missive.exe",
+            "$env:ProgramFiles(x86)\Missive\Missive.exe",
+            "$env:SystemDrive\Missive\Missive.exe",
+            "$env:LOCALAPPDATA\Programs\Missive\Missive.exe"
+        )
+        
+        $executableExists = $false
+        foreach ($path in $commonPaths) {
+            if (Test-Path $path) {
+                Write-Log "Found $softwareName executable at: $path" -Level "INFO"
+                $executableExists = $true
+                break
+            }
+        }
+        
+        # Method 4: Check current user (SYSTEM) uninstall info
+        $currentUserInstalled = Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' -Recurse -ErrorAction SilentlyContinue | 
+            Get-ItemProperty -name DisplayName -ErrorAction SilentlyContinue | 
+            Where-Object { $_.DisplayName -Match "^$softwareName.*" }
+        
+        # Determine if software is installed
+        if ($allUsersInstalled -or $machineInstalled -or $wow64Installed -or $executableExists -or $currentUserInstalled) {
+            Write-Log "$softwareName is already installed on this system" -Level "INFO"
             return $false
         }
+        
+        Write-Log "$softwareName is NOT installed on this system" -Level "INFO"
         return $true
+        
     } catch {
         Write-Log "Failed to check installation status: $($_.Exception.Message)" -Level "ERROR"
         return $false

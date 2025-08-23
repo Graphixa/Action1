@@ -61,6 +61,14 @@ function Write-Log {
 # Main Script Logic
 # ================================
 
+# Convert RemoveDriver from boolean to string
+if ($RemoveDriver -eq 1) {
+    $RemoveDriver = "true"
+}
+if ($RemoveDriver -eq 0) {
+    $RemoveDriver = "false"
+}
+
 # Quick sanity check on inputs
 if ([string]::IsNullOrWhiteSpace($PrinterName)) {
     Write-Log "Missing required variable: PrinterName" -Level "ERROR"

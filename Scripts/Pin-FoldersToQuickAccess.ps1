@@ -24,8 +24,8 @@ $LogFilePath = "$env:SystemDrive\LST\Action1.log" # Default log file path
 function Write-Log {
     param (
         [string]$Message,
-        [string]$LogFilePath = $LogFilePath,
-        [string]$Level = "INFO"
+        [string]$LogFilePath = $LogFilePath, # Default log file path
+        [string]$Level = "INFO"  # Log level: INFO, WARN, ERROR
     )
     
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -52,7 +52,10 @@ function Write-Log {
         }
     }
     
+    # Write log entry to the log file
     Add-Content -Path $LogFilePath -Value $logMessage
+
+    # Write output to Action1 host
     Write-Output "$Message"
 }
 

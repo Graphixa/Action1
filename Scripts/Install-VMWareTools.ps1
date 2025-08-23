@@ -46,6 +46,46 @@ function Write-Log {
     Write-Output "$Message"
 }
 
+# Function to check if VMware Tools is already installed
+function Test-VMwareToolsInstalled {
+    try {
+        # Check for VMware Tools service
+        $vmwareService = Get-Service -Name "VMTools" -ErrorAction SilentlyContinue
+        if ($vmwareService -and $vmwareService.Status -eq "Running") {
+            Write-Log "VMware Tools service is running" -Level "INFO"
+            return $true
+        }
+        
+        # Check for VMware Tools in Programs and Features
+        $vmwareProgram = Get-WmiObject -Class Win32_Product -Filter "Name LIKE '%VMware Tools%'" -ErrorAction SilentlyContinue
+        if ($vmwareProgram) {
+            Write-Log "VMware Tools is installed (found in Programs and Features)" -Level "INFO"
+            return $true
+        }
+        
+        # Check for VMware Tools registry entries
+        $vmwareRegistry = Get-ItemProperty -Path "HKLM:\SOFTWARE\VMware, Inc.\VMware Tools" -ErrorAction SilentlyContinue
+        if ($vmwareRegistry) {
+            Write-Log "VMware Tools registry entries found" -Level "INFO"
+            return $true
+        }
+        
+        # Check for VMware Tools installation directory
+        $vmwareDir = Get-ItemProperty -Path "HKLM:\SOFTWARE\VMware, Inc.\VMware Tools" -Name "InstallPath" -ErrorAction SilentlyContinue
+        if ($vmwareDir -and (Test-Path $vmwareDir.InstallPath)) {
+            Write-Log "VMware Tools installation directory found" -Level "INFO"
+            return $true
+        }
+        
+        Write-Log "VMware Tools is not installed" -Level "INFO"
+        return $false
+    }
+    catch {
+        Write-Log "Error checking VMware Tools installation status: $_" -Level "ERROR"
+        return $false
+    }
+}
+
 # Function to get the latest VMware Tools installer filename
 function Get-LatestVMwareToolsInstaller {
     try {
@@ -81,31 +121,31 @@ function Install-VMwareTools {
     $localPath = Join-Path $VMWareToolsPath $InstallerFileName
     
     try {
-        Write-Host "Downloading VMware Tools from: $fullURL"
-        Write-Host "Saving to: $localPath"
+        Write-Log "Downloading VMware Tools from: $fullURL" -Level "INFO"
+        Write-Log "Saving to: $localPath" -Level "INFO"
         
         # Download the installer
         Invoke-WebRequest -Uri $fullURL -OutFile $localPath -UseBasicParsing
         
         if (Test-Path $localPath) {
-            Write-Host "Download completed successfully"
+            Write-Log "Download completed successfully" -Level "INFO"
             
             # Install VMware Tools silently
-            Write-Host "Installing VMware Tools..."
+            Write-Log "Installing VMware Tools..." -Level "INFO"
             $arguments = "/S /v /qn REBOOT=R"
             Start-Process -FilePath $localPath -ArgumentList $arguments -Wait
             
-            Write-Host "VMware Tools installation completed"
+            Write-Log "VMware Tools installation completed" -Level "INFO"
             
             # Clean up the installer file
             Remove-Item $localPath -Force
-            Write-Host "Cleaned up installer file"
+            Write-Log "Cleaned up installer file" -Level "INFO"
         } else {
             throw "Download failed - file not found at expected location"
         }
     }
     catch {
-        Write-Error "Failed to download or install VMware Tools: $_"
+        Write-Log "Failed to download or install VMware Tools: $_" -Level "ERROR"
         return $false
     }
     
@@ -113,25 +153,35 @@ function Install-VMwareTools {
 }
 
 # Main execution
-Write-Host "Starting VMware Tools installation process..."
+Write-Log "Starting VMware Tools installation process..." -Level "INFO"
+
+# Check if VMware Tools is already installed
+if (Test-VMwareToolsInstalled) {
+    Write-Log "VMware Tools is already installed. Skipping installation." -Level "INFO"
+    Write-Host "VMware Tools is already installed. No action needed."
+    exit 0
+}
 
 # Get the latest installer filename
 $installerFileName = Get-LatestVMwareToolsInstaller
 
 if ($installerFileName) {
-    Write-Host "Found latest VMware Tools installer: $installerFileName"
+    Write-Log "Found latest VMware Tools installer: $installerFileName" -Level "INFO"
     
     # Download and install
     $success = Install-VMwareTools -InstallerFileName $installerFileName
     
     if ($success) {
+        Write-Log "VMware Tools installation process completed successfully" -Level "INFO"
         Write-Host "VMware Tools installation process completed successfully"
         exit 0
     } else {
+        Write-Log "VMware Tools installation failed" -Level "ERROR"
         Write-Error "VMware Tools installation failed"
         exit 1
     }
 } else {
+    Write-Log "Could not determine latest VMware Tools installer" -Level "ERROR"
     Write-Error "Could not determine latest VMware Tools installer"
     exit 1
 }

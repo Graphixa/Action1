@@ -2,30 +2,26 @@
 # Computer Name Assignment Script for Action1
 # ================================================
 # Description:
-#   - This script sets the computer name based on the device's serial number.
-#   - The script detects the system type (workstation, notebook, virtual machine) and assigns a name accordingly
-#      - Workstation = WS-<Serial Number>
-#      - Notebook = NB-<Serial Number>
-#      - Virtual Machine = VM-<Serial Number>
-#   - Serial numbers are sanitized by removing spaces and truncating them to 15 characters.
-#   - The company prefix is optional; if not provided, it defaults to no prefix.
+#   - Sets computer name based on device serial number and system type
+#   - Workstation = WS-<Serial Number>
+#   - Notebook = NB-<Serial Number>  
+#   - Virtual Machine = VM-<Serial Number>
+#   - Names are limited to 15 characters for NetBIOS compatibility
 #
 # Requirements:
-#   - Admin rights are required to rename the computer.
-#   - The serial number should be accessible through the Win32_BIOS class.
-#
+#   - Admin rights required
+#   - Windows systems only
 # ================================================
 
 $CompanyPrefix = ${Computer Name Prefix}
-$LogFilePath = "$env:SystemDrive\LST\Action1.log" # Default log file path
+$LogFilePath = "$env:SystemDrive\LST\Action1.log"
 
-
-# Logging Function
+# Simple logging function
 function Write-Log {
     param (
         [string]$Message,
-        [string]$LogFilePath = $LogFilePath, # Default log file path
-        [string]$Level = "INFO"  # Log level: INFO, WARN, ERROR
+        [string]$LogFilePath = $LogFilePath,
+        [string]$Level = "INFO"
     )
     
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -52,60 +48,92 @@ function Write-Log {
         }
     }
     
-    # Write log entry to the log file
     Add-Content -Path $LogFilePath -Value $logMessage
-
-    # Write output to Action1 host
     Write-Output "$Message"
 }
 
-# Set Computer Name from Device Serial Number
-$SerialNumber = (Get-CimInstance -class win32_bios).SerialNumber
+function Set-ComputerName {
+    Write-Log "Setting Computer Name" -Level "INFO"
 
-# Sanitize the serial number - remove spaces and limit length to 15 characters
-$SerialNumber = $SerialNumber -replace ' ', ''
-$SerialNumber = $SerialNumber.Substring(0, [Math]::Min(15, $SerialNumber.Length))
+    # Get current computer name from registry (authoritative source)
+    $currentName = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\ComputerName\ComputerName" -Name "ComputerName").ComputerName
+    
 
-# Retrieve system type and model information
-$systemTest = (Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object -ExpandProperty PCSystemType)
-$systemModel = (Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object -ExpandProperty Model)
+    # Get serial number from BIOS
+    $serialNumber = (Get-CimInstance -class win32_bios).SerialNumber
 
-# Check if the system is a virtual machine by looking at the model
-$isVM = $systemModel -match "Virtual|VMware|KVM|Hyper-V|VirtualBox"
+    # Get system information
+    $system = Get-CimInstance -ClassName Win32_ComputerSystem
+    $systemType = $system.PCSystemType
+    $systemModel = $system.Model
 
-# Ensure there is a dash between the company prefix and computer type if a prefix is provided
-if ($CompanyPrefix) {
-    $CompanyPrefix += "-"
+    # Determine system type and build computer name
+    $isVM = $systemModel -match "Virtual|VMware|KVM|Hyper-V|VirtualBox|QEMU"
+    
+    if ($isVM) {
+        # For VMs, use the last part of the serial (removes hypervisor prefixes like "VMware-")
+        if ($serialNumber -match '.*-(.+)$') {
+            $serialNumber = $matches[1]
+            Write-Log "VM detected - using unique part of serial: $serialNumber" -Level "INFO"
+        }
+        
+        $typePrefix = "VM"
+        $systemTypeDesc = "Virtual Machine"
+    }
+    elseif ($systemType -eq 1 -or $systemType -eq 3) {
+        $typePrefix = "WS"
+        $systemTypeDesc = "Workstation (Type $systemType)"
+    }
+    elseif ($systemType -eq 2) {
+        $typePrefix = "NB"
+        $systemTypeDesc = "Notebook"
+    }
+    else {
+        $typePrefix = ""
+        $systemTypeDesc = "Unknown ($systemType)"
+    }
+
+    # Clean up serial number
+    $serialNumber = $serialNumber -replace '\s', ''
+    
+    # Build base name components
+    $companyPart = if ($CompanyPrefix) { "$CompanyPrefix-" } else { "" }
+    $typePart = if ($typePrefix) { "$typePrefix-" } else { "" }
+    $baseName = "$companyPart$typePart"
+    
+    # Calculate available space for serial number (15 character NetBIOS limit)
+    $availableSpace = 15 - $baseName.Length
+    if ($serialNumber.Length -gt $availableSpace) {
+        $serialNumber = $serialNumber.Substring(0, $availableSpace)
+    }
+    
+    # Build final computer name
+    $computerName = "${baseName}${serialNumber}"
+    
+    # Check if rename is needed
+    if ($currentName -eq $computerName) {
+        Write-Log "Computer name is already $computerName. No action needed." -Level "WARN"
+        exit 0
+    }
+
+    # Rename the computer
+    try {
+        Write-Log "Renaming computer from '$currentName' to '$computerName'" -Level "INFO"
+        Rename-Computer -NewName $computerName -Force | Out-Null
+        Write-Log "Successfully renamed computer to $computerName" -Level "INFO"
+        Write-Log "Restart required for changes to take full effect." -Level "INFO"
+    }
+    catch {
+        Write-Log "Error renaming computer: $($_.Exception.Message)" -Level "ERROR"
+        exit 1
+    }
 }
 
-# Test system type - WS = Workstation, NB = Notebook, VM = Virtual Machine
-if ($isVM) {
-    $computerName = "${CompanyPrefix}VM-$SerialNumber"
-    Write-Log "Detected system as Virtual Machine. New computer name: $computerName"
-}
-elseif ($systemTest -eq 1) {
-    $computerName = "${CompanyPrefix}WS-$SerialNumber"
-    Write-Log "Detected system as Workstation. New computer name: $computerName"
-}
-elseif ($systemTest -eq 2) {
-    $computerName = "${CompanyPrefix}NB-$SerialNumber"
-    Write-Log "Detected system as Notebook. New computer name: $computerName"
-}
-elseif ($systemTest -eq 3) {
-    $computerName = "${CompanyPrefix}WS-$SerialNumber"
-    Write-Log "Detected system as Workstation. New computer name: $computerName"
-}
-else {
-    $computerName = "${CompanyPrefix}$SerialNumber"
-    Write-Log "System type unrecognized. Defaulting to new computer name: $computerName"
-}
-
-# Attempt to rename the computer
+# Main execution
 try {
-    Rename-Computer -NewName $computerName -Force
-    Write-Log "Successfully renamed computer to $computerName"
-}
-catch {
-    Write-Log "Error renaming computer: $_" -Level "ERROR"
-    Return
+    Set-ComputerName
+    exit 0
+} catch {
+    Write-Log "Error: $($_.Exception.Message)" -Level "ERROR"
+    exit 1
 }

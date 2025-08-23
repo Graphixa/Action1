@@ -220,10 +220,18 @@ function Format-PrinterReport {
 
 Write-Log "Starting printer inventory report generation..." -Level "INFO"
 
+# Convert IncludeOffline from boolean to string
+if ($IncludeOffline -eq 1) {
+    $IncludeOffline = "true"
+}
+if ($IncludeOffline -eq 0) {
+    $IncludeOffline = "false"
+}
+
 try {
     # Get all printers
     $allPrinters = Get-Printer -ErrorAction Stop
-    
+
     # Filter printers based on IncludeOffline setting
     if ($IncludeOffline -eq "true") {
         $filteredPrinters = $allPrinters

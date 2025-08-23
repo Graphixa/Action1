@@ -13,7 +13,7 @@
 
 $ProgressPreference = 'SilentlyContinue'
 
-$ChocolateyAppManifest = ${App Manifest Link}
+$ChocolateyAppManifest = ${App Manifest} # URL to the Chocolatey package manifest file or local path
 $tempPath = "$env:TEMP"
 $LogFilePath = "$env:SystemDrive\LST\Action1.log" # Default log file path
 
