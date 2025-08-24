@@ -10,8 +10,8 @@
       <taskbar:TaskbarPinList>
         <taskbar:DesktopApp DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Google Chrome.lnk" />
         <taskbar:DesktopApp DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Missive.lnk" />
-        <taskbar:DesktopApp DesktopApplicationLinkPath="%WINDIR%\explorer.exe" />
-        <taskbar:DesktopApp DesktopApplicationLinkPath="%WINDIR%\explorer.exe" CommandArguments="/select,G:\" />
+        <taskbar:DesktopApp DesktopApplicationID="Microsoft.Windows.Explorer" />
+        <taskbar:DesktopApp DesktopApplicationLinkPath="G:\" />
         <taskbar:DesktopApp DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Google Drive.lnk" />
       </taskbar:TaskbarPinList>
     </defaultlayout:TaskbarLayout>
