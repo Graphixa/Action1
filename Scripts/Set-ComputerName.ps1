@@ -78,19 +78,16 @@ function Set-ComputerName {
         }
         
         $typePrefix = "VM"
-        $systemTypeDesc = "Virtual Machine"
+
     }
     elseif ($systemType -eq 1 -or $systemType -eq 3) {
         $typePrefix = "WS"
-        $systemTypeDesc = "Workstation (Type $systemType)"
     }
     elseif ($systemType -eq 2) {
         $typePrefix = "NB"
-        $systemTypeDesc = "Notebook"
     }
     else {
         $typePrefix = ""
-        $systemTypeDesc = "Unknown ($systemType)"
     }
 
     # Clean up serial number
