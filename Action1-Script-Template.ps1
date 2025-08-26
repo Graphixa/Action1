@@ -16,7 +16,7 @@ $ProgressPreference = 'SilentlyContinue'
 # ====================
 # Define any custom parameters here.
 
-$softwareName = 'SoftwareName'  # Placeholder for software name
+$softwareName = ${Software Name}  # Placeholder for software name populated by Action1
 $installPath = "$env:SystemDrive\Program Files\$softwareName"
 
 # for all temp paths use $env:temp
@@ -85,7 +85,7 @@ try {
 # Add your main logic for downloading, installing, configuring, etc.
 
 try {
-    Write-Log "Executing main script logic..." -Level "INFO"
+    Write-Log "Executing main script logic for $softwareName on $installPath..." -Level "INFO"
     # Add your main script logic here (e.g., downloading, installing).
 } catch {
     Write-Log "An error occurred during the main script logic: $($_.Exception.Message)" -Level "ERROR"
