@@ -3,7 +3,7 @@
   <RegistrationInfo>
     <Date>2024-09-11T23:27:23.9831162</Date>
     <Author>Action1</Author>
-    <Description>Shutdown script to run at close of business (7pm) every Friday.</Description>
+    <Description>Auto shutdown script to run at close of business (7pm) every Friday.</Description>
     <URI>\FridayAutoShutdown</URI>
   </RegistrationInfo>
   <Triggers>
