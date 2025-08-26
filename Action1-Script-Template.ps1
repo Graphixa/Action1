@@ -1,27 +1,54 @@
-# ================================================
-# PowerShell Script Template for Action1
-# ================================================
-# Description:
-#   - Provide a brief description of the script's purpose.
-#   - Example: This script installs and configures the XYZ software.
-#
-# Requirements:
-#   - List any prerequisites or requirements (e.g., internet access, admin rights).
-# ================================================
+<#
+Title: [Script Name] - [Brief Action Description] (e.g "Set User Permissions - Manage Local Group Memberships")
+
+.SYNOPSIS
+    Brief one-line description of what the script does.
+
+.DESCRIPTION
+    Detailed description of the script's purpose and functionality.
+    Include key features and any important behavioral notes.
+    Example: This script installs and configures XYZ software across the network and handles installation, configuration, and cleanup automatically.
+
+.PARAMETER Action
+    Action to perform. Example: "Add" or "Remove"
+    Required: Yes
+    Validation: Must be one of ["Add", "Remove"]
+
+.PARAMETER UserList
+    Comma-separated list of users to process (e.g. "john_doe, jane_smith")
+    Required: Yes
+    Validation: Cannot be empty, must contain valid usernames
+
+.NOTES
+    Required Action1 Permissions:
+        - Run as System/Admin
+        - File System Access (if needed)
+        - Registry Access (if needed)
+
+    Action1 Configuration:
+        Required Parameters:
+            - Name: "Action"
+              Type: String
+              Options: ["Add", "Remove"]
+            
+            - Name: "User List"
+              Type: String
+              Format: Comma-separated usernames
+#>
 
 $ProgressPreference = 'SilentlyContinue'
 
-# ====================
-# Parameters Section
-# ====================
-# Define any custom parameters here.
+# ================================
+# Action1 Parameters
+# ================================
 
-$softwareName = ${Software Name}  # Placeholder for software name populated by Action1
-$installPath = "$env:SystemDrive\Program Files\$softwareName"
+# Parameters passed from Action1 platform
+$Action = ${Action}              # Example: "Add" or "Remove"
+$UserList = ${User List}         # Example: "john_doe, jane_smith"
 
-# for all temp paths use $env:temp
 
-$LogFilePath = "$env:SystemDrive\LST\Action1.log" # Default log file path
+# Script Constants
+$LogFilePath = "$env:SystemDrive\LST\Action1.log"
 
 # ================================
 # Logging Function: Write-Log
@@ -29,81 +56,79 @@ $LogFilePath = "$env:SystemDrive\LST\Action1.log" # Default log file path
 function Write-Log {
     param (
         [string]$Message,
-        [string]$LogFilePath = $LogFilePath, # Default log file path
+        [string]$LogFilePath = $LogFilePath, # Default log file path    
         [string]$Level = "INFO"  # Log level: INFO, WARN, ERROR
     )
     
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logMessage = "[$timestamp] [$Level] $Message"
-
-    # Ensure the directory for the log file exists
-    $logFileDirectory = Split-Path -Path $LogFilePath -Parent
-    if (!(Test-Path -Path $logFileDirectory)) {
-        try {
-            New-Item -Path $logFileDirectory -ItemType Directory -Force | Out-Null
-        } catch {
-            Write-Error "Failed to create log file directory: $logFileDirectory. $_"
-            return
-        }
-    }
-
-    # Check log file size and recreate if too large
-    if (Test-Path -Path $LogFilePath) {
-        $logSize = (Get-Item -Path $LogFilePath -ErrorAction Stop).Length
-        if ($logSize -ge 5242880) {
-            Remove-Item -Path $LogFilePath -Force -ErrorAction Stop | Out-Null
-            Out-File -FilePath $LogFilePath -Encoding utf8 -ErrorAction Stop
-            Add-Content -Path $LogFilePath -Value "[$timestamp] [INFO] The log file exceeded the 5 MB limit and was deleted and recreated."
-        }
-    }
     
-    # Write log entry to the log file
-    Add-Content -Path $LogFilePath -Value $logMessage
-
-    # Write output to Action1 host
-    Write-Output "$Message"
+    # Use color coding for console output based on level
+    switch ($Level) {
+        "ERROR" { Write-Host "[$timestamp] [$Level] $Message" -ForegroundColor Red -BackgroundColor Black }
+        "WARN"  { Write-Host "[$timestamp] [$Level] $Message" -ForegroundColor Yellow }
+        "INFO"  { Write-Host "[$timestamp] [$Level] $Message" -ForegroundColor White }
+        default { Write-Host "[$timestamp] [$Level] $Message" }
+    }
 }
 
 # ================================
-# Pre-Check Section (Optional)
+# Parameter Validation
 # ================================
-# Use this section for pre-checks.
-# Example: Check if the software is already installed, exit if no action is required.
+# Validate Action1 parameters
+if ([string]::IsNullOrWhiteSpace($Action)) {
+    Write-Log "Action parameter is required" -Level "ERROR"
+    exit 1
+}
 
+if ([string]::IsNullOrWhiteSpace($UserList)) {
+    Write-Log "User List parameter is required" -Level "ERROR"
+    exit 1
+}
+
+# Convert comma-separated string to array and trim whitespace
+$Users = $UserList.Split(',').Trim()
+
+# Validate we have users after splitting
+if ($Users.Count -eq 0 -or ($Users.Count -eq 1 -and [string]::IsNullOrWhiteSpace($Users[0]))) {
+    Write-Log "No valid users provided in User List" -Level "ERROR"
+    exit 1
+}
+
+# ================================
+# Pre-Check Section
+# ================================
 try {
-    # Example pre-check (modify as needed)
-    Write-Log "Performing pre-checks..." -Level "INFO"
-    # Add your pre-check logic here.
-} catch {
+    Write-Log "Starting pre-checks..." -Level "INFO"
+    
+    # Example: Check if users exist
+    foreach ($User in $Users) {
+        # Add your validation logic here
+        Write-Log "Validating user: $User" -Level "INFO"
+    }
+} 
+catch {
     Write-Log "Pre-check failed: $($_.Exception.Message)" -Level "ERROR"
-    return
+    exit 1
 }
 
 # ================================
 # Main Script Logic
 # ================================
-# Add your main logic for downloading, installing, configuring, etc.
-
 try {
-    Write-Log "Executing main script logic for $softwareName on $installPath..." -Level "INFO"
-    # Add your main script logic here (e.g., downloading, installing).
-} catch {
-    Write-Log "An error occurred during the main script logic: $($_.Exception.Message)" -Level "ERROR"
-    return
+    Write-Log "Starting main script execution..." -Level "INFO"
+    Write-Log "Action: $Action" -Level "INFO"
+    Write-Log "Processing users: $($Users -join ', ')" -Level "INFO"
+
+    # Add your main script logic here
+    foreach ($User in $Users) {
+        Write-Log "Processing user: $User" -Level "INFO"
+        # Add your per-user logic here
+    }
+} 
+catch {
+    Write-Log "Script failed: $($_.Exception.Message)" -Level "ERROR"
+    exit 1
 }
 
-# ================================
-# Cleanup Section
-# ================================
-# Clean up temporary files or logs here.
-
-try {
-    Write-Log "Cleaning up temporary files..." -Level "INFO"
-    # Add your cleanup logic here (e.g., removing temp files).
-} catch {
-    Write-Log "Failed to clean up temporary files: $($_.Exception.Message)" -Level "ERROR"
-}
-
-# ================================
-# End of Script
-# ================================
+Write-Log "Script completed successfully" -Level "INFO"
+Exit 0
