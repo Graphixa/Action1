@@ -84,11 +84,11 @@ function Test-Prerequisites {
         $allUsersInstalled = $false
         $userProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList" -ErrorAction SilentlyContinue
         
-        foreach ($profile in $userProfiles) {
+        foreach ($userProfile in $userProfiles) {
             try {
-                $profilePath = Get-ItemProperty -Path $profile.PSPath -Name "ProfileImagePath" -ErrorAction SilentlyContinue
+                $profilePath = Get-ItemProperty -Path $userProfile.PSPath -Name "ProfileImagePath" -ErrorAction SilentlyContinue
                 if ($profilePath.ProfileImagePath -and (Test-Path $profilePath.ProfileImagePath)) {
-                    $userSid = $profile.PSChildName
+                    $userSid = $userProfile.PSChildName
                     $userHKCU = "Registry::HKEY_USERS\$userSid\Software\Microsoft\Windows\CurrentVersion\Uninstall"
                     
                     $userInstalled = Get-ChildItem $userHKCU -Recurse -ErrorAction SilentlyContinue | 
@@ -249,7 +249,10 @@ function Start-MissiveApp {
     }
 }
 
-# Main execution
+# ================================
+# Main Script Logic
+# ================================
+
 try {
     Write-Log "Starting Missive installation process" -Level "INFO"
 

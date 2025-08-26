@@ -12,7 +12,7 @@
 
 $ProgressPreference = 'SilentlyContinue'
 
-# Global Variables
+
 $LogFilePath = "$env:SystemDrive\LST\Action1.log"
 
 function Write-Log {
