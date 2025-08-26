@@ -3,17 +3,20 @@
   <RegistrationInfo>
     <Date>2024-09-11T23:27:23.9831162</Date>
     <Author>Action1</Author>
-    <Description>Shutdown script to run at close of business (7pm) each day.</Description>
-    <URI>\AutoShutdown</URI>
+    <Description>Shutdown script to run at close of business (7pm) every Friday.</Description>
+    <URI>\FridayAutoShutdown</URI>
   </RegistrationInfo>
   <Triggers>
     <CalendarTrigger>
-      <StartBoundary>2024-01-01T18:00:00</StartBoundary>
+      <StartBoundary>2024-01-01T19:00:00</StartBoundary>
       <ExecutionTimeLimit>PT1H</ExecutionTimeLimit>
       <Enabled>true</Enabled>
-      <ScheduleByDay>
-        <DaysInterval>1</DaysInterval>
-      </ScheduleByDay>
+      <ScheduleByWeek>
+        <DaysOfWeek>
+          <Friday />
+        </DaysOfWeek>
+        <WeeksInterval>1</WeeksInterval>
+      </ScheduleByWeek>
     </CalendarTrigger>
   </Triggers>
   <Principals>
@@ -31,7 +34,7 @@
     <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
     <IdleSettings>
       <Duration>PT10M</Duration>
-      <WaitTimeout>PT15M</WaitTimeout>
+      <WaitTimeout>PT10M</WaitTimeout>
       <StopOnIdleEnd>true</StopOnIdleEnd>
       <RestartOnIdle>true</RestartOnIdle>
     </IdleSettings>
@@ -41,18 +44,18 @@
     <RunOnlyIfIdle>true</RunOnlyIfIdle>
     <DisallowStartOnRemoteAppSession>false</DisallowStartOnRemoteAppSession>
     <UseUnifiedSchedulingEngine>true</UseUnifiedSchedulingEngine>
-    <WakeToRun>false</WakeToRun>
+    <WakeToRun>true</WakeToRun>
     <ExecutionTimeLimit>PT1H</ExecutionTimeLimit>
     <Priority>7</Priority>
     <RestartOnFailure>
-      <Interval>PT10M</Interval>
+      <Interval>PT5M</Interval>
       <Count>3</Count>
     </RestartOnFailure>
   </Settings>
   <Actions Context="Author">
     <Exec>
       <Command>shutdown.exe</Command>
-      <Arguments>/s /t 15 /c "The system will shutdown in 15 seconds: Idle systems shutdown daily at 6pm" /f</Arguments>
+      <Arguments>/s /t 15 /c "The system will shutdown in 15 seconds. Systems shutdown every Friday at 7pm" /f</Arguments>
     </Exec>
   </Actions>
 </Task>
