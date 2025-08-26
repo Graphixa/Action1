@@ -152,7 +152,10 @@ function Install-VMwareTools {
     return $true
 }
 
-# Main execution
+# ================================
+# Main Script Logic
+# ================================
+
 Write-Log "Starting VMware Tools installation process..." -Level "INFO"
 
 # Check if VMware Tools is already installed

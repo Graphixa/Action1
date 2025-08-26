@@ -100,7 +100,6 @@ function Set-QuickAccessForAllUsers {
             $guid = [System.Guid]::NewGuid().ToString("B")
             
             # Create the registry entry
-            $newKey = New-Item -Path "$registryPath\$guid" -Force
             Set-ItemProperty -Path "$registryPath\$guid" -Name "Name" -Value $folderName
             Set-ItemProperty -Path "$registryPath\$guid" -Name "Path" -Value $folderPath
             
@@ -130,6 +129,10 @@ function Set-QuickAccessForAllUsers {
         throw
     }
 }
+
+# ================================
+# Main Script Logic
+# ================================
 
 # Initialize foldersToPin array
 $foldersToPin = @()

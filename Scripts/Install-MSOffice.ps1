@@ -156,6 +156,7 @@ try {
 # ================================
 # Main Script Logic
 # ================================
+
 try {
     # Download Office Deployment Tool
     Write-Log "Downloading Office Deployment Tool from $odtUrl" -Level "INFO"
