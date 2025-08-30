@@ -189,10 +189,16 @@ function Get-Image {
             }
             $localImagePath = Join-Path $downloadLocation $fileName
 
-            Write-Log "Downloading image from URL: $imagePath" -Level "INFO"
+            # Log the download start (redirected to avoid capture)
+            $null = Write-Log "Downloading image from URL: $imagePath" -Level "INFO"
             # Redirect output to null to prevent capture
             $null = Invoke-WebRequest -Uri $imagePath -OutFile $localImagePath -ErrorAction Stop
-            Write-Log "Image downloaded to: $localImagePath" -Level "INFO"
+            $null = Write-Log "Image downloaded to: $localImagePath" -Level "INFO"
+            
+            # Verify the file was actually downloaded
+            if (-not (Test-Path $localImagePath)) {
+                throw "Failed to download image to: $localImagePath"
+            }
         } else {
             if (-not (Test-Path $imagePath)) {
                 throw "The image file does not exist or is inaccessible: $imagePath"
@@ -200,10 +206,14 @@ function Get-Image {
             $localImagePath = $imagePath
         }
 
-        # Return the path without any output capture
-        Write-Output $localImagePath
+        # Ensure we return the absolute path
+        $localImagePath = [System.IO.Path]::GetFullPath($localImagePath)
+        $null = Write-Log "Returning local image path: $localImagePath" -Level "INFO"
+        
+        # Return ONLY the path - no other output
+        return $localImagePath
     } catch {
-        Write-Log "Failed to download or copy image: $($_.Exception.Message)" -Level "ERROR"
+        $null = Write-Log "Failed to download or copy image: $($_.Exception.Message)" -Level "ERROR"
         throw
     }
 }
@@ -218,7 +228,9 @@ try {
     if ($wallpaperUrlOrPath) {
         try {
             # Get the image first
+            Write-Log "Getting wallpaper image from: $wallpaperUrlOrPath" -Level "INFO"
             $localWallpaperPath = Get-Image -imagePath $wallpaperUrlOrPath -fileName "wallpaper.jpg"
+            Write-Log "Local wallpaper path resolved to: $localWallpaperPath" -Level "INFO"
 
             # Clean up existing registry entries first
             $registryPath = "HKLM:\Software\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
@@ -231,6 +243,12 @@ try {
             Set-RegistryModification -action add -path $registryPath -name "DesktopImagePath" -type "String" -value $localWallpaperPath
             Set-RegistryModification -action add -path $registryPath -name "DesktopImageUrl" -type "String" -value $localWallpaperPath
             Set-RegistryModification -action add -path $registryPath -name "DesktopImageStatus" -type "DWord" -value 1
+            
+            # Verify the registry values were set correctly
+            $desktopImagePath = Get-ItemProperty -Path $registryPath -Name "DesktopImagePath" -ErrorAction SilentlyContinue
+            if ($desktopImagePath) {
+                Write-Log "Verified DesktopImagePath registry value: $($desktopImagePath.DesktopImagePath)" -Level "INFO"
+            }
             Write-Log "Wallpaper set successfully." -Level "INFO"
         } catch {
             Write-Log "Error setting wallpaper: $($_.Exception.Message)" -Level "ERROR"
@@ -243,7 +261,9 @@ try {
     if ($lockScreenUrlOrPath) {
         try {
             # Get the image first
+            Write-Log "Getting lock screen image from: $lockScreenUrlOrPath" -Level "INFO"
             $localLockScreenPath = Get-Image -imagePath $lockScreenUrlOrPath -fileName "lockscreen.jpg"
+            Write-Log "Local lock screen path resolved to: $localLockScreenPath" -Level "INFO"
 
             # Clean up existing registry entries first
             $registryPath = "HKLM:\Software\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
@@ -256,6 +276,12 @@ try {
             Set-RegistryModification -action add -path $registryPath -name "LockScreenImagePath" -type "String" -value $localLockScreenPath
             Set-RegistryModification -action add -path $registryPath -name "LockScreenImageUrl" -type "String" -value $localLockScreenPath
             Set-RegistryModification -action add -path $registryPath -name "LockScreenImageStatus" -type "DWord" -value 1
+            
+            # Verify the registry values were set correctly
+            $lockScreenImagePath = Get-ItemProperty -Path $registryPath -Name "LockScreenImagePath" -ErrorAction SilentlyContinue
+            if ($lockScreenImagePath) {
+                Write-Log "Verified LockScreenImagePath registry value: $($lockScreenImagePath.LockScreenImagePath)" -Level "INFO"
+            }
             Write-Log "Lock screen image set successfully." -Level "INFO"
         } catch {
             Write-Log "Error setting lock screen image: $($_.Exception.Message)" -Level "ERROR"
@@ -272,3 +298,11 @@ try {
 } catch {
     Write-Log "An error occurred during the setup: $($_.Exception.Message)" -Level "ERROR"
 }
+
+# ================================
+# Test and Verification
+# ================================
+# Uncomment the following lines to test the Get-Image function
+# Write-Log "Testing Get-Image function..." -Level "INFO"
+# $testPath = Get-Image -imagePath "C:\Windows\System32\oobe\images\background.bmp" -fileName "test.bmp"
+# Write-Log "Test result - Path length: $($testPath.Length), Path: $testPath" -Level "INFO"
