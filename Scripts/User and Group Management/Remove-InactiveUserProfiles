@@ -1,0 +1,596 @@
+function Set-ScriptLog {
+    try {
+        #
+        # Debug
+        #
+        #$A1_Agent_Exe_Path = 'C:\Windows\Action1\action1_agent.exe'
+
+        $agent_directory = Get-Item -Path $A1_Agent_Exe_Path -ErrorAction Stop
+        $agent_directory_path = $agent_directory.Directory
+        $log_file_name = '\logs\remove_inactive_user_profiles.log'
+        $script:log_path = Join-Path -Path $agent_directory_path -ChildPath $log_file_name -ErrorAction Stop
+        if (Test-Path -Path $log_path -PathType Leaf) {
+            $log_file = Get-Item -Path $log_path -ErrorAction Stop
+            $log_size = $log_file.Length
+            if ($log_size -ge 5242880) {
+                Remove-Item -Path $log_path -Force -ErrorAction Stop | Out-Null
+                Out-File -FilePath $log_path -Encoding utf8 -ErrorAction Stop
+                Write-Log -LogLevel INFO -Message 'The log file exceeded the 5 MB limit and has been deleted.' -Output Log
+            }
+        }
+        else {
+            New-Item -Path $log_path -ErrorAction Stop | Out-Null
+        }
+    }
+    catch {
+        $exception_message = $_.Exception.Message.Trim()
+        $exception_line = $_.InvocationInfo.ScriptLineNumber
+        $exception_type = $_.Exception.GetType().FullName
+        Write-Log -LogLevel ERROR -Message "The Set-ScriptLog function has been failed to run, caught the exception, type: $exception_type, message: $exception_message, line: $exception_line." -Output All
+    }
+}
+
+function Write-Log {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [ValidateSet("INFO", "ERROR", "DBG")]
+        [string]$LogLevel,
+        [Parameter(Mandatory)]
+        [string]$Message,
+        [Parameter(Mandatory)]
+        [ValidateSet("History", "Log", "All")]
+        [string]$Output
+    )
+    try {
+        switch ($Output) {
+            'History' { $Host.UI.WriteLine($Message) }
+            'Log' {
+                if (-not([string]::IsNullOrEmpty($log_path))) {
+                    $timestamp = ([datetime]::Now).ToString('yyyyMMdd HH:mm:sszzz')
+                    $log_message = $timestamp + ' - ' + $LogLevel + ' - ' + $Message
+                    Add-Content -Path $log_path -Value $log_message -Encoding UTF8 -ErrorAction Stop
+                }
+            }
+            'All' {
+                $Host.UI.WriteLine($Message)
+                if (-not([string]::IsNullOrEmpty($log_path))) {
+                    $timestamp = ([datetime]::Now).ToString('yyyyMMdd HH:mm:sszzz')
+                    $log_message = $timestamp + ' - ' + $LogLevel + ' - ' + $Message
+                    Add-Content -Path $log_path -Value $log_message -Encoding UTF8 -ErrorAction Stop
+                }
+            }
+        }
+    }
+    catch {
+        $exception_message = $_.Exception.Message.Trim()
+        $exception_line = $_.InvocationInfo.ScriptLineNumber
+        $exception_type = $_.Exception.GetType().FullName
+        $Host.UI.WriteLine("The Write-Log function has been failed to run, caught the exception, type: $exception_type, message: $exception_message, line: $exception_line.")
+    }
+}
+
+function Test-OSCompat {
+    try {
+        $osVersion = [System.Environment]::OSVersion.Version
+        if (($osVersion.Major -lt 10) -or (($osVersion.Major -eq 10) -and ($osVersion.Build -lt 17763))) {
+            Write-Log -LogLevel INFO -Message "The endpoint operating system version is $($osVersion -join '.'), the minimum supported operating system version is 10.0.17763." -Output All
+            return $false
+        }
+        return $true
+    }
+    catch {
+        return $false
+    }
+}
+
+function Test-PSCompat {
+    $psv = $PSVersionTable.PSVersion
+    if (($psv.Major -lt 5) -or (($psv.Major -eq 5) -and ($psv.Minor -lt 1))) {
+        Write-Log -LogLevel INFO -Message "The current version of PowerShell is $($psv.Major).$($psv.Minor), the minimum supported version of PowerShell is 5.1 and above." -Output All
+        return $false
+    }
+    return $true
+}
+
+function Test-SID {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [string]$Value
+    )
+    try {
+        $object = New-Object System.Security.Principal.SecurityIdentifier($Value)
+        $is_account_sid = $object.IsAccountSid()
+        Write-Log -LogLevel INFO -Message "The SID $Value is valid account SID." -Output Log
+        return $is_account_sid
+    }
+    catch {
+        Write-Log -LogLevel ERROR -Message "The SID $Value cannot be checked for the valid account SID." -Output Log
+        return $false
+    }
+}
+
+function Get-SID {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [string]$Username
+    )
+    try {
+        $sid = (New-Object Security.Principal.NTAccount($Username)).Translate([Security.Principal.SecurityIdentifier]).Value
+        Write-Log -LogLevel INFO -Message "Successfully translated the netbios username $Username to SID $sid." -Output Log
+        return $sid
+    }
+    catch {
+        Write-Log -LogLevel ERROR -Message "Unable to translate the netbios username $Username to SID." -Output Log
+        return $false
+    }
+}
+
+function Get-Username {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [string]$SID
+    )
+    try {
+        $netbios_username = (New-Object System.Security.Principal.SecurityIdentifier($SID)).Translate([System.Security.Principal.NTAccount]).Value
+        Write-Log -LogLevel INFO -Message "Successfully translated the SID $SID to the netbios username $netbios_username." -Output Log
+        return $netbios_username
+    }
+    catch {
+        Write-Log -LogLevel ERROR -Message "Unable to translate the SID $SID to the netbios username." -Output Log
+        return $false
+    }
+}
+
+function Remove-ProfileNative {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [string]$SID,
+        [Parameter(Mandatory)]
+        [string]$ProfilePath
+    )
+    $member_definition = @'
+[DllImport("userenv.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+public static extern bool DeleteProfile(string sidString, string profilePath, string computerName);
+'@
+
+    if (-not ([System.Management.Automation.PSTypeName]'Win32Functions.NativeDeleteProfile').Type) {
+        Add-Type -MemberDefinition $member_definition -Name 'NativeRemoveProfile' -Namespace 'Win32Functions'
+    }
+
+    $return_value = [Win32Functions.NativeRemoveProfile]::DeleteProfile($SID, $ProfilePath, [NullString]::Value)
+    Write-Log -LogLevel DBG -Message "The Remove-ProfileNative function has returned $return_value." -Output Log
+    return $return_value
+}
+
+function Move-ItemDelayed {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [string]$Path,
+        [Parameter(Mandatory)]
+        [string]$Destination
+    )
+
+    $flag = 0x00000004
+
+    $member_definition = @'
+[DllImport("kernel32.dll", SetLastError=true, CharSet=CharSet.Unicode)]
+public static extern bool MoveFileEx(string lpExistingFileName, string lpNewFileName, int dwFlags);
+'@
+
+    if (-not ([System.Management.Automation.PSTypeName]'Win32Functions.MoveItemDelayed').Type) {
+        Add-Type -MemberDefinition $member_definition -Name 'MoveItemDelayed' -Namespace 'Win32Functions'
+    }
+
+    $return_value = [Win32Functions.MoveItemDelayed]::MoveFileEx($Path, $Destination, $flag)
+    Write-Log -LogLevel DBG -Message "The Move-ItemDelayed function has returned $return_value." -Output Log
+    return $return_value
+}
+
+function Set-ServiceStatus {
+    [CmdletBinding()]
+    param (
+        [Parameter()]
+        [ValidateSet("Start", "Stop", "Status")]
+        [string]$Action,
+        [Parameter()]
+        [PSCustomObject]$ServiceList
+    )
+
+    $running_status = 'Running'
+    $stopped_status = 'Stopped'
+    $time_span = New-TimeSpan -Seconds 180 -ErrorAction SilentlyContinue
+    switch ($Action) {
+        'Status' {
+            $stop_services = @('PcaSvc', 'DiagTrack')
+            $service_object = Get-Service -Name $stop_services -ErrorAction SilentlyContinue | Select-Object Name, Status -ErrorAction SilentlyContinue
+            if ($null -ne $service_object) {
+                $service_string = $service_object | Out-String -ErrorAction SilentlyContinue
+                $service_string_trim = $service_string.Trim()
+                Write-Log -LogLevel INFO -Message "The current state of services: `r`n $service_string_trim" -Output Log
+                return $service_object
+            }
+        }
+        'Start' {
+            foreach ($service in $ServiceList) {
+                $service_name = $service.Name
+                $service_status = $service.Status
+                if ($service_status -eq $running_status) {
+                    Start-Service -Name $service_name -ErrorAction SilentlyContinue
+                    $service = Get-Service -Name $service_name -ErrorAction SilentlyContinue
+                    if ($null -ne $service) {
+                        $service.WaitForStatus($running_status, $time_span)
+                        $service_string = $service | Select-Object Name, Status -ErrorAction SilentlyContinue | Out-String -ErrorAction SilentlyContinue
+                        $service_string_trim = $service_string.Trim()
+                        Write-Log -LogLevel INFO -Message "The current state of service: `r`n $service_string_trim" -Output Log
+                    }
+                }
+            }
+        }
+        'Stop' {
+            foreach ($service in $ServiceList) {
+                $service_name = $service.Name
+                $service_status = $service.Status
+                if ($service_status -eq $running_status) {
+                    Write-Log -LogLevel INFO -Message "Stopping the service." -Output Log
+                    Stop-Service -Name $service_name -ErrorAction SilentlyContinue
+                    $service = Get-Service -Name $service_name -ErrorAction SilentlyContinue
+                    if ($null -ne $service) {
+                        $service.WaitForStatus($stopped_status, $time_span)
+                        $service_string = $service | Select-Object Name, Status -ErrorAction SilentlyContinue | Out-String -ErrorAction SilentlyContinue
+                        $service_string_trim = $service_string.Trim()
+                        Write-Log -LogLevel INFO -Message "The current state of service: `r`n $service_string_trim" -Output Log
+                    }
+                }
+            }
+        }
+    }
+}
+
+function Get-RegistryValue {
+    param (
+        [Parameter(Mandatory)]
+        [string]$RegistryPath,
+        [Parameter(Mandatory)]
+        [string]$RegistryValue
+    )
+    try {
+        if (Test-Path -Path $RegistryPath -PathType Container) {
+            $key = Get-Item -Path $RegistryPath -ErrorAction Stop
+            $value = $key.GetValue($RegistryValue, $null)
+            return $value
+        }
+    }
+    catch {}
+}
+
+function Main {
+    begin {
+        Set-ScriptLog
+        Write-Log -LogLevel INFO -Message 'Logging started.' -Output Log
+    }
+
+    process {
+        $limit = ${Days of inactivity}
+        if ($limit -isnot [int]) {
+            Write-Log -LogLevel INFO -Message "The specified value $limit is not an integer, please specify an integer value of the 'Inactivity Period' parameter." -Output All
+            return
+        }
+        if ($limit -le 6) {
+            Write-Log -LogLevel INFO -Message "The specified value $limit is less than the minimum allowed 7 days, please specify a higher value of the 'Inactivity Period' parameter." -Output All
+            return
+        }
+        Write-Log -LogLevel INFO -Message "The inactivity period is $limit." -Output Log
+
+        $remove_without_sign_in = $remove_without_sign_in_parameter = ${Remove stale profiles without sign in date}
+        if ([string]::IsNullOrEmpty($remove_without_sign_in)) {
+            Write-Log -LogLevel INFO -Message "The specified value of the 'Remove stale profiles without sign in date' parameter is empty, the parameter can take the values yes or no." -Output All
+            return
+        }
+        $remove_without_sign_in = $remove_without_sign_in.ToLower().Trim(' ', "'", '"')
+        if ($remove_without_sign_in -eq 'yes') {
+            $remove_without_sign_in = $true
+        }
+        else {
+            $remove_without_sign_in = $false
+        }
+        Write-Log -LogLevel INFO -Message "The remove profile without sign in date is $remove_without_sign_in_parameter, after converting to the bool type - $remove_without_sign_in." -Output Log
+
+        $exclude_user_profiles = ${Exclude usernames or SIDs}
+        $exclude_sid_input_array = @()
+        if (-not([string]::IsNullOrEmpty($exclude_user_profiles))) {
+            Write-Log -LogLevel INFO -Message "The following profiles have been specified to be excluded: $exclude_user_profiles." -Output Log
+            Write-Log -LogLevel INFO -Message "Resolving SID of excluded profiles." -Output Log
+            $exclude_user_profile_array = $exclude_user_profiles -split ','
+            foreach ($exclude_user_profile in $exclude_user_profile_array) {
+                $value = $exclude_user_profile.Trim(' ', "'", '"')
+                $is_sid = Test-SID -Value $value
+                if ($is_sid -ne $false) {
+                    $exclude_sid_input_array += $value
+                }
+                else {
+                    $sid = Get-SID -Username $value
+                    if ($sid -ne $false) {
+                        $exclude_sid_input_array += $sid
+                    }
+                }
+            }
+        }
+        else {
+            Write-Log -LogLevel INFO -Message "There no exclusions have been specified." -Output Log
+        }
+
+        $exclude_sid_input_array = $exclude_sid_input_array | Select-Object -Unique
+        Write-Log -LogLevel INFO -Message "The SID list of excluded profiles after translation: $($exclude_sid_input_array -join ', ')." -Output Log
+
+        Write-Log -LogLevel INFO -Message "The search for the inactive user profiles older than $limit days has been started." -Output All
+        Write-Log -LogLevel INFO -Message "The following user profiles have been excluded: $exclude_user_profiles." -Output History
+        Write-Log -LogLevel INFO -Message "Remove stale profiles without sign in date: $remove_without_sign_in_parameter." -Output History
+
+        try {
+            $user_profiles = Get-CimInstance -ClassName Win32_UserProfile -ErrorAction Stop
+            $exclude_service = $user_profiles | Where-Object { $_.Special -eq $true } -ErrorAction Stop
+            $exclude_service_sid = $exclude_service.SID
+            Write-Log -LogLevel INFO -Message "The SID list of excluded system profiles: $($exclude_service_sid -join ', ')." -Output Log
+            $exclude_sid_array = $exclude_service_sid + $exclude_sid_input_array
+
+            $exclude_netbios_username_array = @()
+            foreach ($exclude_sid in $exclude_sid_array) {
+                $netbios_username = Get-Username -SID $exclude_sid
+                if ($netbios_username -eq $false) {
+                    $exclude_netbios_username_array += $exclude_sid
+                    continue
+                }
+                $exclude_netbios_username_array += $netbios_username
+            }
+
+            $exclude_netbios_username_array = $exclude_netbios_username_array | Select-Object -Unique
+            $exclude_netbios_username_string = $exclude_netbios_username_array -join ', '
+            Write-Log -LogLevel INFO -Message "The following user profiles have been excluded: $exclude_netbios_username_string." -Output Log
+
+            $profile_list_registry_path = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList'
+            $profile_list = Get-ChildItem -Path $profile_list_registry_path -ErrorAction Stop
+            $profile_list_with_exclusions = $profile_list | Where-Object { $_.PSChildName -notin $exclude_sid_array } -ErrorAction Stop
+        }
+        catch {
+            $exception_message = $_.Exception.Message.Trim()
+            $exception_line = $_.InvocationInfo.ScriptLineNumber
+            $exception_type = $_.Exception.GetType().FullName
+            Write-Log -LogLevel ERROR -Message "The Main function has been failed to run, caught the exception, type: $exception_type, message: $exception_message, line: $exception_line." -Output All
+        }
+
+        Write-Log -LogLevel INFO -Message "Collecting the user profiles from the registry." -Output Log
+
+        $profile_list_load_unload = @()
+        foreach ($profile in $profile_list_with_exclusions) {
+            $profile_object = New-Object -TypeName psobject
+            $sid = $profile.PSChildName
+            $netbios_username = Get-Username -SID $sid
+            if ($netbios_username -eq $false) {
+                $netbios_username = $sid
+            }
+
+            $profile_path = Get-RegistryValue -RegistryPath $profile.PSPath -RegistryValue ProfileImagePath
+
+            $lplth = Get-RegistryValue -RegistryPath $profile.PSPath -RegistryValue LocalProfileLoadTimeHigh
+            if ($null -ne $lplth -and $lplth -ne 0) {
+                $lplth = '{0:X8}' -f $lplth
+            }
+            else {
+                $lplth = $false
+            }
+
+            $lpltl = Get-RegistryValue -RegistryPath $profile.PSPath -RegistryValue LocalProfileLoadTimeLow
+            if ($null -ne $lpltl -and $lpltl -ne 0) {
+                $lpltl = '{0:X8}' -f $lpltl
+            }
+            else {
+                $lpltl = $false
+            }
+
+            try {
+                if ($lplth -ne $false -and $lpltl -ne $false) {
+                    $load_time = [datetime]::FromFileTime([string]::Join('', '0x', $lplth, $lpltl))
+                }
+                else {
+                    $load_time = $null
+                }
+            }
+            catch {
+                $exception_message = $_.Exception.Message.Trim()
+                $exception_line = $_.InvocationInfo.ScriptLineNumber
+                $exception_type = $_.Exception.GetType().FullName
+                Write-Log -LogLevel ERROR -Message "Failed to get the load time, caught the exception, type: $exception_type, message: $exception_message, line: $exception_line." -Output Log
+                Write-Log -LogLevel ERROR -Message "The SID - $sid, the netbios username - $netbios_username, LocalProfileLoadTimeHigh - $lplth, LocalProfileLoadTimeLow - $lpltl ." -Output Log
+                $load_time = $false
+            }
+
+            $lputh = Get-RegistryValue -RegistryPath $profile.PSPath -RegistryValue LocalProfileUnloadTimeHigh
+            if ($null -ne $lputh -and $lputh -ne 0) {
+                $lputh = '{0:X8}' -f $lputh
+            }
+            else {
+                $lputh = $false
+            }
+
+            $lputl = Get-RegistryValue -RegistryPath $profile.PSPath -RegistryValue LocalProfileUnloadTimeLow
+            if ($null -ne $lputl -and $lputl -ne 0) {
+                $lputl = '{0:X8}' -f $lputl
+            }
+            else {
+                $lputl = $false
+            }
+
+            try {
+                if ($lputh -ne $false -and $lputl -ne $false) {
+                    $unload_time = [datetime]::FromFileTime([string]::Join('', '0x', $lputh, $lputl))
+                }
+                else {
+                    $unload_time = $null
+                }
+            }
+            catch {
+                $exception_message = $_.Exception.Message.Trim()
+                $exception_line = $_.InvocationInfo.ScriptLineNumber
+                $exception_type = $_.Exception.GetType().FullName
+                Write-Log -LogLevel ERROR -Message "Failed to get the unload time, caught the exception, type: $exception_type, message: $exception_message, line: $exception_line." -Output Log
+                Write-Log -LogLevel ERROR -Message "The SID - $sid, the netbios username - $netbios_username, LocalProfileUnloadTimeHigh - $lputh, LocalProfileUnloadTimeLow - $lputl ." -Output Log
+                $unload_time = $false
+            }
+
+            $profile_object | Add-Member NoteProperty Username -Value $netbios_username
+            $profile_object | Add-Member NoteProperty SID -Value $sid
+            $profile_object | Add-Member NoteProperty ProfilePath -Value $profile_path
+            $profile_object | Add-Member NoteProperty LoadTime -Value $load_time
+            $profile_object | Add-Member NoteProperty UnloadTime -Value $unload_time
+
+            $profile_list_load_unload += $profile_object
+        }
+
+        if ($profile_list_load_unload.Count -eq 0) {
+            Write-Log -LogLevel INFO -Message "No user profiles have been found." -Output All
+            return
+        }
+
+        $profile_list_to_remove = @()
+        foreach ($profile in $profile_list_load_unload) {
+            try {
+                $netbios_username = $profile.Username
+                $sid = $profile.SID
+                [uint64]$rid = ($sid -split '-')[($sid -split '-').Count - 1]
+                $profile_path = $profile.ProfilePath
+                $load_time = $profile.LoadTime
+                $unload_time = $profile.UnloadTime
+                $currentDate = [datetime]::Now
+
+                if ($rid -lt 1000) {
+                    Write-Log -LogLevel INFO -Message "The RID less than 1000 is not processed, skipping it, the SID - $sid, the netbios username - $netbios_username." -Output All
+                    continue
+                }
+
+                if ([string]::IsNullOrEmpty($profile_path)) {
+                    Write-Log -LogLevel INFO -Message "The Profile Path is null or empty, skipping it, the SID - $sid, the netbios username - $netbios_username." -Output All
+                    continue
+                }
+
+                $current_date_format = $currentDate.ToString('MM/dd/yyyy HH:mm:ss')
+                Write-Log -LogLevel INFO -Message "Analyzing the load and unload time." -Output Log
+                Write-Log -LogLevel INFO -Message "The SID - $sid, the netbios username - $netbios_username, the load time - $load_time, the unload time - $unload_time, the current date - $current_date_format." -Output Log
+
+                if ($unload_time -eq $false -or $load_time -eq $false) {
+                    Write-Log -LogLevel INFO -Message "The profile sign in or sign out date is not defined, skipping it, the SID - $sid, the netbios username - $netbios_username." -Output All
+                    continue
+                }
+
+                if ($null -eq $unload_time -and $null -eq $load_time) {
+                    if ($remove_without_sign_in -eq $true) {
+                        $profile_list_to_remove += $profile
+                        Write-Log -LogLevel INFO -Message "The SID - $sid, the netbios username - $netbios_username fits the search criteria." -Output All
+                        continue
+                    }
+                    Write-Log -LogLevel INFO -Message "No profile sign in and sign out date have been found for the account $netbios_username, $sid." -Output All
+                    continue
+                }
+                if ($null -eq $load_time) {
+                    Write-Log -LogLevel INFO -Message "No profile sign in date has been found for the account $netbios_username, $sid." -Output All
+                    continue
+                }
+                if ($null -eq $unload_time) {
+                    Write-Log -LogLevel INFO -Message "No profile sign out date has been found for the account $netbios_username, $sid." -Output All
+                    continue
+                }
+
+                $unload_delta = New-TimeSpan -Start $unload_time -End $currentDate -ErrorAction Stop
+                if ($unload_time -gt $load_time -and $unload_delta.Days -ge $limit) {
+                    $profile_list_to_remove += $profile
+                    Write-Log -LogLevel INFO -Message "The SID - $sid, the netbios username - $netbios_username fits the search criteria." -Output Log
+                }
+                else {
+                    Write-Log -LogLevel INFO -Message "The SID - $sid, the netbios username - $netbios_username does not fit the search criteria." -Output Log
+                }
+            }
+            catch {
+                $exception_message = $_.Exception.Message.Trim()
+                $exception_line = $_.InvocationInfo.ScriptLineNumber
+                $exception_type = $_.Exception.GetType().FullName
+                Write-Log -LogLevel ERROR -Message "The Main function has been failed to run, caught the exception, type: $exception_type, message: $exception_message, line: $exception_line." -Output All
+            }
+        }
+
+        if ($profile_list_to_remove.Count -eq 0) {
+            Write-Log -LogLevel INFO -Message "No user profile matching the search criteria has been found." -Output All
+            return
+        }
+
+        $service_list = Set-ServiceStatus -Action Status
+        Set-ServiceStatus -Action Stop -ServiceList $service_list
+
+        foreach ($profile in $profile_list_to_remove) {
+            try {
+                $netbios_username = $profile.Username
+                $sid = $profile.SID
+                $profile_path = $profile.ProfilePath
+
+                $profile_is_loaded = Test-Path -Path "Registry::HKU\$sid" -ErrorAction Stop
+                if ($profile_is_loaded -eq $true) {
+                    Start-Process -FilePath REG -ArgumentList "UNLOAD HKU\$sid" -Wait -ErrorAction SilentlyContinue
+                }
+
+                $return_value = Remove-ProfileNative -SID $sid -ProfilePath $profile_path
+                if ($return_value -eq $true) {
+                    Write-Log -LogLevel INFO -Message "The $netbios_username, $sid profile and its directory have been successfully removed." -Output All
+                }
+                else {
+                    $user_profile = $user_profiles | Where-Object { $_.SID -eq $sid } -ErrorAction Stop
+                    if ($null -ne $user_profile) {
+                        $user_profile | Remove-CimInstance -ErrorAction Stop
+                        Write-Log -LogLevel INFO -Message "The $netbios_username, $sid profile and its directory have been successfully removed." -Output All
+                    }
+                    else {
+                        Write-Log -LogLevel INFO -Message "The user profile record is missing from the WMI repository." -Output All
+                    }
+                }
+            }
+            catch [Microsoft.Management.Infrastructure.CimException] {
+                $exception_message = $_.Exception.Message.Trim()
+                $exception_line = $_.InvocationInfo.ScriptLineNumber
+                $exception_type = $_.Exception.GetType().FullName
+                Write-Log -LogLevel ERROR -Message "The Main function has been failed to run, caught the exception, type: $exception_type, message: $exception_message, line: $exception_line." -Output Log
+
+                $source_path = $profile_path
+                $destination_path = $source_path + ([datetime]::Now).ToString('.yyyy_MM_dd_HH_mm_ss') + '.Action1_bak'
+                $mid = Move-ItemDelayed -Path $source_path -Destination $destination_path
+                if ($mid -eq $true) {
+                    Write-Log -LogLevel INFO -Message "Unable to delete the user profile directory because it is being used by another process." -Output All
+                    Write-Log -LogLevel INFO -Message "The $netbios_username, $sid profile directory will be renamed to $destination_path after restart of the endpoint." -Output All
+                    $user_profile = $profile_list_with_exclusions | Where-Object { $_.PSChildName -eq $sid } -ErrorAction Stop
+                    Remove-Item -Path $user_profile.PSPath -Recurse -Force -ErrorAction Stop
+                    Write-Log -LogLevel INFO -Message "The $netbios_username, $sid profile has been successfully removed." -Output All
+                }
+                else {
+                    Write-Log -LogLevel INFO -Message "Unable to create pending rename operation of the $netbios_username profile directory." -Output All
+                }
+            }
+            catch {
+                $exception_message = $_.Exception.Message.Trim()
+                $exception_line = $_.InvocationInfo.ScriptLineNumber
+                $exception_type = $_.Exception.GetType().FullName
+                Write-Log -LogLevel ERROR -Message "The Main function has been failed to run, caught the exception, type: $exception_type, message: $exception_message, line: $exception_line." -Output All
+            }
+        }
+    }
+    end {
+        Set-ServiceStatus -Action Start -ServiceList $service_list
+        Write-Log -LogLevel INFO -Message "The search for the inactive user profiles has been completed." -Output All
+        Write-Log -LogLevel INFO -Message 'Logging finished.' -Output Log
+    }
+}
+
+if ($(Test-OSCompat) -and $(Test-PSCompat)) {
+    Main
+}
