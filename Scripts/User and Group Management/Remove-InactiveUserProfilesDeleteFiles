@@ -1,3 +1,25 @@
+# ================================================
+# Remove Inactive User Profiles and Delete Files script for Action1 (Original script by Action1)
+# ================================================
+# Description:
+#   - This script removes inactive user profiles and their associated files.
+#   - It supports deleting user folders and their contents which is new from the original script by Action1.
+#   - The original script by Action1 only removes the user profiles and does not delete the user folders and their contents.
+#
+# Requirements:
+#   - Must run with elevated privileges (SYSTEM or Administrator)
+#
+# Don't forget to set the following parameters in Action1:
+#   - Inactivity Period | integer | allowed values: between 7 and 365
+#   - Remove stale profiles without sign in date | string | allowed values: yes or no
+#   - Exclude usernames or SIDs | string | comma-separated list of usernames or SIDs e.g. "john_doe, jane_smith"
+#   - Delete user folders and files | string | allowed values: true or false
+# ================================================
+
+$DeleteUserFolders = ${Delete User Folders and Files} 
+# Example: true to delete user folders and their contents and remove the user profiles,
+#          false to not delete user folders and their contents and just remove the user profiles
+
 function Set-ScriptLog {
     try {
         #
@@ -153,12 +175,13 @@ function Remove-ProfileNative {
         [Parameter(Mandatory)]
         [string]$ProfilePath
     )
+
     $member_definition = @'
 [DllImport("userenv.dll", CharSet = CharSet.Unicode, SetLastError = true)]
 public static extern bool DeleteProfile(string sidString, string profilePath, string computerName);
 '@
 
-    if (-not ([System.Management.Automation.PSTypeName]'Win32Functions.NativeDeleteProfile').Type) {
+    if (-not ([System.Management.Automation.PSTypeName]'Win32Functions.NativeRemoveProfile').Type) {
         Add-Type -MemberDefinition $member_definition -Name 'NativeRemoveProfile' -Namespace 'Win32Functions'
     }
 
@@ -172,10 +195,11 @@ function Move-ItemDelayed {
     param (
         [Parameter(Mandatory)]
         [string]$Path,
-        [Parameter(Mandatory)]
+        [Parameter()]
         [string]$Destination
     )
 
+    # 0x00000004 = MOVEFILE_DELAY_UNTIL_REBOOT
     $flag = 0x00000004
 
     $member_definition = @'
@@ -187,6 +211,7 @@ public static extern bool MoveFileEx(string lpExistingFileName, string lpNewFile
         Add-Type -MemberDefinition $member_definition -Name 'MoveItemDelayed' -Namespace 'Win32Functions'
     }
 
+    # If $Destination is $null, MoveFileEx schedules a delete on reboot
     $return_value = [Win32Functions.MoveItemDelayed]::MoveFileEx($Path, $Destination, $flag)
     Write-Log -LogLevel DBG -Message "The Move-ItemDelayed function has returned $return_value." -Output Log
     return $return_value
@@ -563,17 +588,49 @@ function Main {
                 Write-Log -LogLevel ERROR -Message "The Main function has been failed to run, caught the exception, type: $exception_type, message: $exception_message, line: $exception_line." -Output Log
 
                 $source_path = $profile_path
-                $destination_path = $source_path + ([datetime]::Now).ToString('.yyyy_MM_dd_HH_mm_ss') + '.Action1_bak'
-                $mid = Move-ItemDelayed -Path $source_path -Destination $destination_path
-                if ($mid -eq $true) {
-                    Write-Log -LogLevel INFO -Message "Unable to delete the user profile directory because it is being used by another process." -Output All
-                    Write-Log -LogLevel INFO -Message "The $netbios_username, $sid profile directory will be renamed to $destination_path after restart of the endpoint." -Output All
-                    $user_profile = $profile_list_with_exclusions | Where-Object { $_.PSChildName -eq $sid } -ErrorAction Stop
-                    Remove-Item -Path $user_profile.PSPath -Recurse -Force -ErrorAction Stop
-                    Write-Log -LogLevel INFO -Message "The $netbios_username, $sid profile has been successfully removed." -Output All
+
+                if ($DeleteUserFolders) {
+                    # Strict cleanup: delete the folder on reboot
+                    $mid = Move-ItemDelayed -Path $source_path -Destination $null
+
+                    if ($mid -eq $true) {
+                        Write-Log -LogLevel INFO -Message "Unable to delete the user profile directory because it is being used by another process." -Output All
+                        Write-Log -LogLevel INFO -Message "The $netbios_username, $sid profile directory will be deleted after restart of the endpoint." -Output All
+                    }
+                    else {
+                        Write-Log -LogLevel INFO -Message "Unable to schedule delete operation for the $netbios_username, $sid profile directory on restart." -Output All
+                    }
                 }
                 else {
-                    Write-Log -LogLevel INFO -Message "Unable to create pending rename operation of the $netbios_username profile directory." -Output All
+                    # Safer mode: quarantine folder by renaming it on reboot
+                    $destination_path = $source_path + ([datetime]::Now).ToString('.yyyy_MM_dd_HH_mm_ss') + '.Action1_bak'
+                    $mid = Move-ItemDelayed -Path $source_path -Destination $destination_path
+
+                    if ($mid -eq $true) {
+                        Write-Log -LogLevel INFO -Message "Unable to delete the user profile directory because it is being used by another process." -Output All
+                        Write-Log -LogLevel INFO -Message "The $netbios_username, $sid profile directory will be renamed to $destination_path after restart of the endpoint." -Output All
+                    }
+                    else {
+                        Write-Log -LogLevel INFO -Message "Unable to create pending rename operation of the $netbios_username profile directory." -Output All
+                    }
+                }
+
+                # In all cases, remove the registry entry so there is no ghost profile
+                try {
+                    $user_profile = $profile_list_with_exclusions | Where-Object { $_.PSChildName -eq $sid } -ErrorAction Stop
+                    if ($null -ne $user_profile) {
+                        Remove-Item -Path $user_profile.PSPath -Recurse -Force -ErrorAction Stop
+                        Write-Log -LogLevel INFO -Message "The $netbios_username, $sid profile has been successfully removed from the registry." -Output All
+                    }
+                    else {
+                        Write-Log -LogLevel INFO -Message "The $netbios_username, $sid profile registry record was not found during clean-up." -Output All
+                    }
+                }
+                catch {
+                    $exception_message_inner = $_.Exception.Message.Trim()
+                    $exception_line_inner = $_.InvocationInfo.ScriptLineNumber
+                    $exception_type_inner = $_.Exception.GetType().FullName
+                    Write-Log -LogLevel ERROR -Message "Failed to remove the profile registry key for $netbios_username, $sid, caught the exception, type: $exception_type_inner, message: $exception_message_inner, line: $exception_line_inner." -Output All
                 }
             }
             catch {
